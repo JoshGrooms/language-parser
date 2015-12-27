@@ -1,0 +1,18 @@
+{
+    "name": "language-parser",
+    "main": "./lib/Main",
+    "version": "0.0.0",
+    "description": "",
+    "keywords": [  ],
+    "activationCommands":  {
+      "atom-workspace": "debug-panel:toggle"
+    },
+    "repository": "",
+    "license": "",
+    "engines":  {
+      "atom": ">=1.2.4 <2.0.0"
+    },
+    "dependencies": {
+        "first-mate": "^5.1.1"
+    }
+}

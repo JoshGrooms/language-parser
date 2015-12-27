@@ -1,0 +1,19 @@
+
+
+
+
+
+IsPythonic:         true
+IsStaticallyTyped:  false
+
+Comment:            "#"
+
+Enclosure:
+    Close:
+        Block:      [ "}", "@Outdent" ]
+        Comment:    "###"
+        Generic:    null
+    Open:
+        Block:      [ "{", "@Indent" ]
+        Comment:    "###"
+        Generic:    null

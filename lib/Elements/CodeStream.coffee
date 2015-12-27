@@ -72,11 +72,9 @@ exports.CodeStream = class CodeStream
     #               the current stream position, so a value of '0' retrieves the very next unread character, while a value of
     #               '1' retrieves the character after that.
     #               DEFAULT: 0
-    _PeekCharacter: (n = 0) ->
-        return @_Text[@_Index + n] unless @EOS();
+    _PeekCharacter: (n = 0) -> return @_Text[@_Index + n] unless @EOS();
     # _READCHARACTER - Gets the next character in the stream, consuming it in the process.
-    _ReadCharacter: ->
-        return @_Text[@_Index++] unless @EOS();
+    _ReadCharacter:         -> return @_Text[@_Index++] unless @EOS();
     # _SKIP - Skip over a specified number of characters in the text stream.
     #
     #   SYNTAX:

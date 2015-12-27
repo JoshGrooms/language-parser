@@ -18,7 +18,7 @@ module.exports = class DynamicGrammar extends Grammar
 
     ## CONSTRUCTOR & DESTRUCTOR ##
     constructor: (@_Program, registry) ->
-        @_CodeFile = null
+        @_CodeFile = @_Program.RequestFile()
         @_LineCount = 0
 
         @_EditorChangeCallback = atom.workspace.onDidChangeActivePaneItem(@_UpdateCodeFile)
@@ -51,10 +51,11 @@ module.exports = class DynamicGrammar extends Grammar
         # 'compatibilityMode' appears to be hard-coded as 'false', based on its call from
         # line 383 of 'tokenized-buffer.coffee', which appears to be the only caller.
 
-        @_CodeFile ?= @_Program.RequestFile()
+        # @_CodeFile ?= @_Program.RequestFile()
 
-        tokens = @_CodeFile.RetokenizeLine(line, firstLine)
         tags = [ ]
+        tokens = @_CodeFile.RetokenizeLine(line, firstLine)?.Tokens
+
         if tokens?
             for a in [0 .. tokens.length - 1]
                 token = tokens[a]
@@ -66,3 +67,11 @@ module.exports = class DynamicGrammar extends Grammar
 
         ruleStack = { }
         return { line, tags, ruleStack }
+
+    var:
+        "
+            Testing this out on some text
+            some additional text
+            Some more text
+            testing this out some more
+        "

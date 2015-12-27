@@ -1,18 +1,25 @@
 # CHANGELOG
 # Written by Josh Grooms on 20151222
 
+require('../Utilities/ArrayExtensions')
 
 
-exports = class CodeLine
 
-    _Tokens:         [ ]
+module.exports = class CodeLine
+
+
+    Tokens:        [ ]
     LineNumber:     0
     Type:           ""
 
 
 
-    constructor: ->
-        @_Tokens = [ ]
+    constructor: (@LineNumber)->
+        @Tokens     = [ ]
+        @Type       = ""
+
 
 
     Add: (token) ->
+        @Tokens.Merge(token)
+        return undefined

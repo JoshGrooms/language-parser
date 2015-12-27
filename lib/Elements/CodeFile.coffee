@@ -3,6 +3,7 @@
 
 Blocks                  = require('../Defaults/Blocks')
 CodeBlock               = require('./CodeBlock')
+CodeLine                = require('./CodeLine')
 { CompositeDisposable } = require('atom')
 { CodeStream, Token }   = require('./CodeStream')
 { Lexicon, Symbols }    = require('../Defaults')
@@ -14,54 +15,62 @@ CodeBlock               = require('./CodeBlock')
 
 module.exports = class CodeFile
 
+    _Block:             null
     _Editor:            null
     _FileStream:        null
     _LineCount:         0
     _Lines:             [ ]
     _LineStream:        null
     _Name:              null
-    _Tokens:            [ ]
     _SweepActive:       false
     _WorkingLine:       0
 
-    _Registrations:     null
+    _Subscriptions:     null
 
 
 
     ## CONSTRUCTOR & DESTRUCTOR ##
     constructor: (@_Editor) ->
+        @_Block         = new CodeBlock(Blocks.File)
         @_FileStream    = new CodeStream(@_Editor.GetText())
         @_LineCount     = 0
         @_Lines         = [ ]
         @_LineStream    = new CodeStream('')
         @_Name          = @_Editor.ActiveEditor.getPath()
-        @_Registrations = new CompositeDisposable()
+        @_Subscriptions = new CompositeDisposable()
 
         @_ProcessFile()
 
-        @_Registrations.add( @_Editor.ActiveEditor.onDidStopChanging(@ReprocessFile) )
-        # @_Registrations.add( @_Editor.ActiveEditor.onDidChangeGrammar(@ReprocessFile) )
+        @_Subscriptions.add( @_Editor.ActiveEditor.onDidStopChanging(@ReprocessFile) )
+        @_Subscriptions.add( @_Editor.ActiveEditor.getBuffer().onWillChange(@_HandleTextChange) )
+        # @_Subscriptions.add( @_Editor.ActiveEditor.onDidChangeGrammar(@ReprocessFile) )
 
     destroy: ->
-        @_Registrations.dispose()
+        @_Subscriptions.dispose()
+
+
+
+    ## PRIVATE UTILITIES ##
+    _ProcessFile: =>
+        ctLine = new CodeLine(@_LineCount)
+        while ( !@_FileStream.EOS() )
+            @_Block.Add(@_FileStream.ReadToken())
+            # ctToken = @_FileStream.ReadToken()
+            #
+            # if ctToken.Type is "NewLine"
+            #     ctLine.Add(ctToken)
+            #     @_Lines.push(ctLine)
+            #     @_LineCount++
+            #     ctLine = new CodeLine(@_LineCount)
+            # else
+            #     ctLine.Add(ctToken)
+
+    _HandleTextChange: (evt) ->
+        # console.log(evt)
 
 
 
     ## PUBLIC UTILITIES ##
-
-    _ProcessFile: =>
-        ctLine = [ ]
-        while (!@_FileStream.EOS())
-            ctToken = @_FileStream.ReadToken()
-
-            if ctToken.Type is "NewLine"
-                ctLine.push(ctToken)
-                @_Lines.push(ctLine)
-                @_LineCount++
-                ctLine = [ ]
-            else
-                ctLine.push(ctToken)
-
 
     ReprocessFile: =>
         @_FileStream.Reset(@_Editor.GetText())
@@ -69,19 +78,9 @@ module.exports = class CodeFile
         @_Lines = [ ]
         @_Name = @_Editor.ActiveEditor.getPath()
 
-        ctLine = [ ]
-        while (!@_FileStream.EOS())
-            ctToken = @_FileStream.ReadToken()
+        @_ProcessFile()
 
-            if ctToken.Type is "NewLine"
-                ctLine.push(ctToken)
-                @_Lines.push(ctLine)
-                @_LineCount++
-                ctLine = [ ]
-            else
-                ctLine.push(ctToken)
-
-        @_Editor.ActiveEditor.displayBuffer.tokenizedBuffer.retokenizeLines()
+        # @_Editor.ActiveEditor.displayBuffer.tokenizedBuffer.retokenizeLines()
         # @_Editor.ActiveEditor.displayBuffer.tokenizedBuffer.reloadGrammar()
         # @_Editor.ActiveEditor.displayBuffer.updateAllScreenLines()
 
@@ -90,10 +89,10 @@ module.exports = class CodeFile
         @_LineStream.Reset(text)
 
         newLineFound = false
-        line = [ ]
+        line = new CodeLine(@_WorkingLine)
         while ( !@_LineStream.EOS() )
             token = @_LineStream.ReadToken()
-            line.push(token)
+            line.Add(token)
 
         return line
 
@@ -114,6 +113,5 @@ module.exports = class CodeFile
             else
                 return @_Lines[@_WorkingLine++]
 
-        console.log(text)
         @_WorkingLine = @_Editor.GetCursorPosition().row
         return @ReprocessLine(text, @_WorkingLine)

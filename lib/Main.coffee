@@ -1,17 +1,22 @@
 # CHANGELOG
 # Written by Josh Grooms on 20151218
 
+{ clone, overload }     = require('./Utilities/ObjectFunctions')
+
 CodeFile                = require('./Elements/CodeFile')
 { CodeStream, Token }   = require('./Elements/CodeStream')
 { CompositeDisposable } = require('atom');
 DebugView               = require('./DebugView');
 Editor                  = require('./Editor');
-{ Lexicon, Symbols }    = require('./Defaults');
+# { Lexicon, Symbols }    = require('./Defaults');
 DynamicGrammar          = require('./DynamicGrammar')
 DynamicRegistry         = require('./DynamicRegistry')
 
 
 module.exports = LanguageParser =
+
+    _CodeFiles:         { }
+    _Lexicons:          { }
 
     DefaultLexicon:     null
     Editor:             null
@@ -20,13 +25,15 @@ module.exports = LanguageParser =
     UI:                 null
 
 
-    _CodeFiles:         { }
 
 
 
     ## ATOM PACKAGE METHODS ##
     activate: (state) ->
-        @_CodeFiles = [ ];
+        @_CodeFiles = { };
+        @_Lexicons = { };
+
+        @DefaultLexicon = require('./Defaults/Lexicon')
         @Editor = new Editor();
         @Subscriptions = new CompositeDisposable;
         @UI = new DebugView();
@@ -46,6 +53,14 @@ module.exports = LanguageParser =
             file.destroy()
 
 
+    ## PRIVATE UTILITIES ##
+    _GenerateCodeFile: (id) ->
+        file = new CodeFile(@Editor)
+        @_CodeFiles[id] = file
+
+
+
+
     ## PUBLIC METHODS ##
     Hide:       -> @UI.Hide();
     Toggle:     -> if @UI.IsVisible() then @Hide() else @Show();
@@ -62,12 +77,22 @@ module.exports = LanguageParser =
 
     RequestFile: ->
         id = @Editor.ActiveEditor.id
-        file = @_CodeFiles[id]
+        return file if file = @_CodeFiles[id]
 
-        if file? then return file
-
-        file = new CodeFile(@Editor)
+        file = new CodeFile(this)
         @_CodeFiles[id] = file
-        # console.log(@Editor.GetAllText())
 
         return file
+
+
+    RequestLexicon: (extension) ->
+        return @DefaultLexicon if !extension?
+        return lexicon if lexicon = @_Lexicons[extension]
+
+        lexicon = clone(@DefaultLexicon)
+        overload( lexicon, require("./Languages/#{extension.toLowerCase()}.coffee") )
+        @_Lexicons[extension] = lexicon
+
+        return lexicon
+        # console.log(@DefaultLexicon)
+        # return @DefaultLexicon

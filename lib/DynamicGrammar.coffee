@@ -57,13 +57,11 @@ module.exports = class DynamicGrammar extends Grammar
         tokens = @_CodeFile.RetokenizeLine(line, firstLine)?.Tokens
 
         if tokens?
-            for a in [0 .. tokens.length - 1]
-                token = tokens[a]
-                if token?
-                    type = token.Type.replace(' ', '.').toLowerCase()
-                    tags.push(@_StartID(type))
-                    tags.push(token.Length())
-                    tags.push(@_EndID(type))
+            for token in tokens when token?
+                type = token.Type.replace(' ', '.').toLowerCase()
+                tags.push(@_StartID(type))
+                tags.push(token.Length())
+                tags.push(@_EndID(type))
 
         ruleStack = { }
         return { line, tags, ruleStack }
@@ -74,4 +72,5 @@ module.exports = class DynamicGrammar extends Grammar
             some additional text
             Some more text
             testing this out some more
+            testing this out
         "

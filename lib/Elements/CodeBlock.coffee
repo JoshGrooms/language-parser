@@ -79,21 +79,23 @@ module.exports = class CodeBlock
 
 
     Add: (token) ->
-        if @_CurrentBlock?
-            @_CurrentBlock.Add(token)
-
-
-            return undefined
-
-
-        @_CurrentLine.Add(token)
-
-        switch
-            when token.Type is "NewLine"
-                @Children.push(@_CurrentLine)
-                @_CurrentLine = new CodeLine()
-
-            when token.Type.Contains("Enclosure.Open")
-
-
-        if token.Type is "NewLine"
+        # return false if @_IsClosed
+        #
+        # if @_CurrentBlock?
+        #     @_CurrentBlock.Add(token)
+        #
+        #
+        #     return undefined
+        #
+        #
+        # @_CurrentLine.Add(token)
+        #
+        # switch
+        #     when token.Type is "NewLine"
+        #         @Children.push(@_CurrentLine)
+        #         @_CurrentLine = new CodeLine()
+        #
+        #     when token.Type.Contains("Enclosure.Open")
+        #
+        #
+        # if token.Type is "NewLine"

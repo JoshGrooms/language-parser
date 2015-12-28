@@ -2,6 +2,25 @@
 # Written by Josh Grooms on 20151221
 
 
+exports.clone = clone = (x) ->
+    return x if !x? || typeof(x) isnt 'object'
+
+    return new Date(x.getTime()) if x instanceof Date
+
+    if x instanceof RegExp
+        flags = ''
+        flags += 'g' if x.global?
+        flags += 'i' if x.ignoreCase?
+        flags += 'm' if x.multiline?
+        flags += 'y' if x.sticky?
+        return new RegExp(x.source, flags)
+
+    y = new x.constructor()
+    y[k] = clone x[k] for k of x
+    return y
+
+
+
 
 
 exports.isfield = isfield = (x, field) ->
@@ -124,6 +143,16 @@ exports.find = find = (x, value) ->
             if contains(x, value) then return '' else return null
 
 
+exports.overload = overload = (x, y) ->
+    return x if type(x) != type(y) != 'object'
+
+    for k, v of y when x[k] isnt undefined
+        if type(x[k]) == type(v) == 'object'
+            overload(x[k], v)
+        else
+            x[k] = v
+
+    return x
 
 
 # exports.search = search = (x, value, fields) ->

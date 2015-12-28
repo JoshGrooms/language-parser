@@ -17,7 +17,9 @@ module.exports = class CodeFile
 
     _Block:             null
     _Editor:            null
+    _Extension:         null
     _FileStream:        null
+    _Lexicon:           null
     _LineCount:         0
     _Lines:             [ ]
     _LineStream:        null
@@ -28,22 +30,40 @@ module.exports = class CodeFile
     _Subscriptions:     null
 
 
+    Extension:          null
+
+
 
     ## CONSTRUCTOR & DESTRUCTOR ##
-    constructor: (@_Editor) ->
-        @_Block         = new CodeBlock(Blocks.File)
-        @_FileStream    = new CodeStream(@_Editor.GetText())
+    constructor: (@_Program) ->
+        @_Editor        = @_Program.Editor
+        @_Name          = @_Editor.ActiveEditor.getPath()
+
+        @_Extension     = @_Name[ @_Name.lastIndexOf('.') + 1 .. @_Name.length - 1 ]
+        @_Lexicon       = @_Program.RequestLexicon(@_Extension)
         @_LineCount     = 0
         @_Lines         = [ ]
-        @_LineStream    = new CodeStream('')
-        @_Name          = @_Editor.ActiveEditor.getPath()
         @_Subscriptions = new CompositeDisposable()
+
+        @_Block         = new CodeBlock(@_Lexicon.Blocks.File)
+        @_FileStream    = new CodeStream(@_Editor.GetText(), @_Lexicon)
+        @_LineStream    = new CodeStream('', @_Lexicon)
 
         @_ProcessFile()
 
         @_Subscriptions.add( @_Editor.ActiveEditor.onDidStopChanging(@ReprocessFile) )
         @_Subscriptions.add( @_Editor.ActiveEditor.getBuffer().onWillChange(@_HandleTextChange) )
         # @_Subscriptions.add( @_Editor.ActiveEditor.onDidChangeGrammar(@ReprocessFile) )
+
+        # idxExt = @_Name.lastIndexOf('.')
+        # if idxExt isnt -1
+        #     @Extension = @_Name[ idxExt + 1 .. @_Name.length - 1 ] if idxExt isnt -1
+        #     @_Lexicon = @_Program.RequestLexicon(@Extension)
+        # else
+        #     @Extension = "Unknown"
+        #     @_Lexicon = @_Program.DefaultLexicon
+
+
 
     destroy: ->
         @_Subscriptions.dispose()
@@ -54,16 +74,11 @@ module.exports = class CodeFile
     _ProcessFile: =>
         ctLine = new CodeLine(@_LineCount)
         while ( !@_FileStream.EOS() )
-            @_Block.Add(@_FileStream.ReadToken())
-            # ctToken = @_FileStream.ReadToken()
-            #
-            # if ctToken.Type is "NewLine"
-            #     ctLine.Add(ctToken)
-            #     @_Lines.push(ctLine)
-            #     @_LineCount++
-            #     ctLine = new CodeLine(@_LineCount)
-            # else
-            #     ctLine.Add(ctToken)
+            ctToken = @_FileStream.ReadToken()
+            if !ctLine.Add(ctToken)
+                @_Lines.push(ctLine)
+                @_LineCount++
+                ctLine = new CodeLine(@_LineCount, ctToken)
 
     _HandleTextChange: (evt) ->
         # console.log(evt)

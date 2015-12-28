@@ -4,7 +4,7 @@
 require('../Utilities/ArrayExtensions')
 require('../Utilities/StringExtensions')
 { type } = require('../Utilities/ObjectFunctions')
-{ Lexicon, Symbols } = require('../Defaults')
+# { Lexicon, Symbols } = require('../Defaults')
 
 
 
@@ -13,8 +13,8 @@ exports.Token = class Token
     _Buffer:        [ ]
     Type:           ""
 
-    constructor: (char) ->
-        @_Buffer    = [ char ]
+    constructor: (char = null) ->
+        @_Buffer    = if char? then [ char ] else [ ]
 
 
     # ADD - Appends one or more characters to the end of the current token value.
@@ -37,6 +37,7 @@ exports.CodeStream = class CodeStream
     _BlockStack:    [ ]
     _Continue:      false
     _CurrentToken:  null
+    _Lexicon:       null
     _LineNumber:    0
     _Indentation:   0
     _Index:         0
@@ -45,7 +46,7 @@ exports.CodeStream = class CodeStream
 
 
     ## CONSTRUCTOR ##
-    constructor: (@_Text) ->
+    constructor: (@_Text, @_Lexicon) ->
         @_BlockStack    = [ ]
         @_Continue      = false
         @_CurrentToken  = null
@@ -105,11 +106,6 @@ exports.CodeStream = class CodeStream
             return false if @_PeekCharacter(a) isnt symbol[a]
         return true
 
-    _ResumeProcessing: ->
-        return false if !@_Continue
-        return false if !(@_CurrentBlock()?.Content?)
-        return true
-
     # _CURRENTBLOCK - Gets the current block for which code is being processed from the block stack.
     _CurrentBlock: ->
         return null if !@_BlockStack.length
@@ -132,7 +128,7 @@ exports.CodeStream = class CodeStream
             @_CurrentToken.Type = @_CurrentToken.Type.replace("Open", "Close")
         else
             @_CurrentToken.Type = @_CurrentToken.Type.replace("Close", "Open")
-            block = Lexicon.ResolveEnclosure(@_CurrentToken.Value())
+            block = @_Lexicon.ResolveBlock(@_CurrentToken.Value())
             if block?
                 @_Continue = true
                 @_BlockStack.push(block)
@@ -141,7 +137,7 @@ exports.CodeStream = class CodeStream
     # _PROCESSNUMBER - Creates a numeric literal token out of adjacent number characters.
     _ProcessNumber: ->
         @_CurrentToken.Type = "Literal.Number"
-        @_ProcessUntil( (x) -> !Lexicon.IsNumber(x) )
+        @_ProcessUntil( (x) => !@_Lexicon.IsNumber(x) )
 
     # _PROCESSYMBOLIC - Creates a symbolic token out of adjacent and compatible characters.
     #
@@ -150,27 +146,27 @@ exports.CodeStream = class CodeStream
     _ProcessSymbolic: ->
 
         # Append characters so we can match the maximum-length symbols first
-        @_CurrentToken.Add(@_PeekCharacter(a)) for a in [ 0 .. Lexicon.MaxCharsPerSymbolic - 2 ]
+        @_CurrentToken.Add(@_PeekCharacter(a)) for a in [ 0 .. @_Lexicon.MaxCharsPerSymbolic - 1 ]
 
         # Repeatedly trim the end character off of the token until a symbol is resolved
         ctTokenValue = @_CurrentToken.Value()
         while ( @_CurrentToken.Length() > 1 )
-            @_CurrentToken.Type = Lexicon.ResolveSymbolic(ctTokenValue)
+            @_CurrentToken.Type = @_Lexicon.ResolveSymbolic(ctTokenValue)
             break if @_CurrentToken.Type?
 
             @_CurrentToken.Remove()
             ctTokenValue = @_CurrentToken.Value()
 
         # If a symbol has not yet been resolved, make one last attempt with the single-character token
-        @_CurrentToken.Type ?= Lexicon.ResolveSymbolic(ctTokenValue)
-        @_Skip(ctTokenValue.length - 1)
+        @_CurrentToken.Type ?= @_Lexicon.ResolveSymbolic(ctTokenValue)
+        @_Skip(ctTokenValue.length)
 
         # Exit this method here if the symbol cannot be resolved
         if !@_CurrentToken.Type?
             @_CurrentToken.Type = "Unknown"
             return undefined
 
-        if Lexicon.IsEnclosure(ctTokenValue)
+        if @_Lexicon.IsEnclosure(ctTokenValue)
             @_ProcessEnclosure()
 
         return undefined
@@ -206,14 +202,17 @@ exports.CodeStream = class CodeStream
     # _PROCESSWHITESPACE - Creates a single token out of adjacent whitespace characters.
     _ProcessWhiteSpace: ->
         @_CurrentToken.Type = "WhiteSpace"
-        @_ProcessUntil( (x) -> !Lexicon.IsWhiteSpace(x) )
+        @_ProcessUntil( (x) => !@_Lexicon.IsWhiteSpace(x) )
 
     # _PROCESSWORD - Creates a single token that consists of some kind of word.
     _ProcessWord: ->
-        @_ProcessUntil( (x) -> !Lexicon.IsWordCharacter(x) )
-        @_CurrentToken.Type = Lexicon.ResolveWord(@_CurrentToken.Value())
+        @_ProcessUntil( (x) => !@_Lexicon.IsWordCharacter(x) )
+        @_CurrentToken.Type = @_Lexicon.ResolveWord(@_CurrentToken.Value())
 
-
+    _ResumeProcessing: ->
+        return false if !@_Continue
+        return false if !(@_CurrentBlock()?.Content?)
+        return true
 
 
 
@@ -233,20 +232,21 @@ exports.CodeStream = class CodeStream
         return @_TokenQueue.pop() if @_TokenQueue.length
         return null if @EOS()
 
-        char = @_ReadCharacter()
-        @_CurrentToken = new Token(char)
+        char = @_PeekCharacter()
+        @_CurrentToken = new Token()
 
         switch
 
             when char is '\n'
+                @_CurrentToken.Add(@_ReadCharacter())
                 @_CurrentToken.Type = "NewLine"
                 @_LineNumber++
 
-            when @_ResumeProcessing()               then @_ProcessContent()
-            when char is Symbols.Comment            then @_ProcessComment()
-            when Lexicon.IsOpenWordCharacter(char)  then @_ProcessWord()
-            when Lexicon.IsWhiteSpace(char)         then @_ProcessWhiteSpace()
-            when Lexicon.IsNumber(char)             then @_ProcessNumber()
+            when @_ResumeProcessing()                 then @_ProcessContent()
+            when char is @_Lexicon.Symbols.Comment    then @_ProcessComment()
+            when @_Lexicon.IsOpenWordCharacter(char)  then @_ProcessWord()
+            when @_Lexicon.IsWhiteSpace(char)         then @_ProcessWhiteSpace()
+            when @_Lexicon.IsNumber(char)             then @_ProcessNumber()
 
             else @_ProcessSymbolic()
 

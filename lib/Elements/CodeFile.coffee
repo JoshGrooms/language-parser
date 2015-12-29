@@ -55,14 +55,6 @@ module.exports = class CodeFile
         @_Subscriptions.add( @_Editor.ActiveEditor.getBuffer().onWillChange(@_HandleTextChange) )
         # @_Subscriptions.add( @_Editor.ActiveEditor.onDidChangeGrammar(@ReprocessFile) )
 
-        # idxExt = @_Name.lastIndexOf('.')
-        # if idxExt isnt -1
-        #     @Extension = @_Name[ idxExt + 1 .. @_Name.length - 1 ] if idxExt isnt -1
-        #     @_Lexicon = @_Program.RequestLexicon(@Extension)
-        # else
-        #     @Extension = "Unknown"
-        #     @_Lexicon = @_Program.DefaultLexicon
-
 
 
     destroy: ->
@@ -118,7 +110,6 @@ module.exports = class CodeFile
             @_SweepActive = true
             @_WorkingLine = 0
 
-            # return @_Lines[@_WorkingLine++]
             return @ReprocessLine(text, @_WorkingLine++)
 
 

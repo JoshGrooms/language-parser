@@ -50,7 +50,9 @@ module.exports = class CodeBlock
     # PARENT - The parent block that contains this block.
     Parent:             0
     # SIGNATURE - The symbols that declare and define a block.
-    # Signature:
+    Signature:
+        Prefix:         null
+        Suffix:         null
 
     Tag:                ""
     # VISIBILITY - How visible the block itself is to the surrounding world.
@@ -62,19 +64,19 @@ module.exports = class CodeBlock
         @_CurrentBlock = null
         @_CurrentLine = new CodeLine()
 
+        @Accessibility  = Access.Global
+        @Begin          = 0
+        @Children       = [ ]
+        @Close          = Symbols.Enclosure.Close.Block
+        @Name           = "block"
+        @Open           = Symbols.Enclosure.Open.Block
+        @Parent         = null
+        @Signature      = { }
+        @Visibility     = Access.Global
+
         if block?
             for k, v of block when this[k]?
                 this[k] = v
-        else
-            @Accessibility  = Access.Global
-            @Begin          = 0
-            @Children       = [ ]
-            @Close          = Symbols.Enclosure.Close.Block
-            @Name           = "block"
-            @Open           = Symbols.Enclosure.Open.Block
-            @Parent         = null
-            @Visibility     = Access.Global
-
 
 
 

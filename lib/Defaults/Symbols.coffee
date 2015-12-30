@@ -4,8 +4,6 @@
 
 
 module.exports =
-    Comment:                                "#"
-
     # ENCLOSURE - A listing of common programming language enclosure characters
     Enclosure:
         Close:
@@ -66,9 +64,9 @@ module.exports =
             SubtractionAssignment:          "-="
 
         Symbol:
+            Comment:                        "//"
             Escape:                         "\\"
             LineTerminator:                 ";"
             Preprocessor:                   "#"
             Separator:                      ","
-            This:                           "@"
             Variadic:                       "..."

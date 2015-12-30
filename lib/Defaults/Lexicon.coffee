@@ -21,12 +21,16 @@ require('../Utilities/StringExtensions')
 module.exports =
 
     Blocks:                             require('./Blocks')
+    Literals:                           require('./Literals')
     Symbols:                            require('./Symbols')
     Words:                              require('./Words')
 
 
+    DefaultTag:                         "Variable"
     FileExtension:                      [ ".*" ]
 
+
+    AreDeclarationsDefinitions:         true
 
     CanEntitiesSpanFiles:               false
 
@@ -43,69 +47,81 @@ module.exports =
     MaxCharsPerSymbolic:                3
 
 
-    # Get: (address) ->
-    #     fields = address.split('.')
-    #     obj = Symbols
-    #     obj = obj[field] for field in fields
-    #     return obj
+    Get: (address) ->
+        fields = address.split('.')
+        obj = this
+        obj = obj[field] for field in fields
+        return obj
+
+    # ISENCLOSURE - Determines whether a character is an open enclosure symbol.
+    IsEnclosure: (char)             -> return contains(@Symbols.Enclosure, char)
+    # ISEQUIVALENT - Determines whether a symbol and the symbol pointed to by a tag are equivalent.
+    IsEquivalent: (symbol, tag)     -> return @Get(tag) is symbol
+    # ISKEYWORD - Determines whether a word is a language keyword.
+    IsKeyword: (word)               -> return contains(@Words.Keyword, word)
+    # ISNUMBER - Determines whether a character is a number.
+    IsNumber: (char)                -> return contains(@Words.Word.Number, char)
+    IsOpenEnclosure: (char)         -> return contains(@Symbols.Enclosure.Open, char)
+    IsOpenWordCharacter: (char)     -> return contains(@Words.Word.Open, char)
+    IsOperator: (char)              -> return contains(@Symbols.Operator, char)
+    IsSymbolic: (char)              -> return contains(@Symbols, char)
+    IsWhiteSpace: (char)            -> return contains(@Words.WhiteSpace, char)
+    IsWordCharacter: (char)         -> return contains(@Words.Word, char)
+
+    # IsNumeric:              (char) ->
+    #     return true if @IsNumber(char)
+    #     return true if
+
+    IsEnclosureMatched:     (open, close) ->
+        openTag = find(@Symbols.Enclosure.Open, open)
+        return false if !openTag?
+        closeTag = find(@Symbols.Enclosure.Close, close)
+        return false if !closeTag?
+        return true if openTag is closeTag
+        return false
 
 
-    IsEnclosure:            (char) -> return contains(@Symbols.Enclosure, char)
-    IsKeyword:              (word) -> return contains(@Words.Keyword, word)
-    IsNumber:               (char) -> return contains(@Words.Word.Number, char)
-    IsOpenEnclosure:        (char) -> return contains(@Symbols.Enclosure.Open, char)
-    IsOpenWordCharacter:    (char) -> return contains(@Words.Word.Open, char)
-    IsOperator:             (char) -> return contains(@Symbols.Operator, char)
-    IsSymbolic:             (char) -> return contains(@Symbols, char)
-    IsWhiteSpace:           (char) -> return contains(@Words.WhiteSpace, char)
-    IsWordCharacter:        (char) -> return contains(@Words.Word, char)
 
 
+    # Resolve: (entity) -> return find(@Symbols, entity)
 
-
-
-    Resolve: (entity) -> return find(@Symbols, entity)
-
-    ResolveCharacter: (char) -> return find(@Symbols, char)
-
-
-    ResolveOperator: (char) ->
-        type = find(@Symbols.Operator, char)
-        type ?= "Unknown"
-        return type
-
-    ResolveSymbolic: (char) ->
-        type = find(@Symbols.Enclosure, char)
-        type ?= find(@Symbols.Operator, char)
-        if type?
-            type = "Enclosure." + type
-
-        return type
-
-    ResolveWord: (word) ->
-        type = find(@Words, word)
-        type ?= "Variable"
-        return type
+    # ResolveCharacter: (char) -> return find(@Symbols, char)
 
     ResolveEnclosure: (char) ->
-        type = find(@Blocks, char)
-        return null if !type?
+        enc = find(@Symbols.Enclosure, char)
+        return null if !enc?
+        return "Symbols.Enclosure." + enc
 
-        if type.Contains(".Close")
-            type = type.replace(".Close", "")
+    ResolveOperator: (char) ->
+        op = find(@Symbols.Operator, char)
+        return null if !op?
+        return "Symbols.Operator." + op
 
-        fields = type.split('.')
-        block = @Blocks
+    ResolveSymbolic: (char) ->
+        sym = @ResolveEnclosure(char)
+        sym ?= @ResolveOperator(char)
+        return sym
 
-        block = block[field] for field in fields
+    ResolveWord: (word) ->
+        word = find(@Words, word)
+        word ?= "Variable"
+        return "Words." + word
+
+    ResolveBlock: (enclosure, initial = null) ->
+        initial ?= @Blocks
+        block = null
+
+        for k, v of initial when v?
+            if type(v) is 'object'
+                return block if block = @ResolveBlock(enclosure, v)
+
+            if v.Open is enclosure
+                block = v
+                break
+
+        return null if !block?
 
         return block
-
-    ResolveBlock: (enclosure) ->
-        for k, v of @Blocks
-            if v.Open is enclosure
-                return v
-        return null
 
 
 

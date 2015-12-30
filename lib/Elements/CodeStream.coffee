@@ -53,11 +53,25 @@ exports.CodeStream = class CodeStream
         @_Index         = 0
         @_LineNumber    = 0
         @_Text          = @_Text.replace(/\r/gm, '')
+        @_TokenQueue    = [ ]
 
 
 
-    ## PRIVATE STREAM METHODS ##
-
+    ## PRIVATE UTILITIES ##
+    # _CURRENTBLOCK - Gets the current block for which code is being processed from the block stack.
+    _CurrentBlock: ->
+        return null if !@_BlockStack.length
+        return @_BlockStack[@_BlockStack.length - 1]
+    # _ISCLOSEFORCURRENTBLOCK - Determines if a symbol marks the close of a previously opened block.
+    _IsCloseForCurrentBlock: (symbol) ->
+        return false if !@_CurrentBlock()?.Close?
+        return true if @_Lexicon.IsEquivalent(symbol, @_CurrentBlock().Close)
+        return false
+    # _ISNEXTSYMBOL - Determines whether the next symbol in the text stream would match the inputted symbol.
+    _IsNextSymbol: (symbol) =>
+        for a in [ 0 .. symbol.length - 1 ]
+            return false if @_PeekCharacter(a) isnt symbol[a]
+        return true
     # _PEEKCHARACTER - Gets the next character in the stream without consuming it.
     #
     #   SYNTAX:
@@ -93,58 +107,39 @@ exports.CodeStream = class CodeStream
 
 
     ## PRIVATE TOKENIZING METHODS ##
-
-    # _ISCLOSEFORCURRENTBLOCK - Determines if a symbol marks the close of a previously opened block.
-    _IsCloseForCurrentBlock: (symbol) ->
-        return false if !@_CurrentBlock()?.Close?
-        return true if symbol == @_CurrentBlock().Close #Lexicon.Get(@_CurrentBlock().Close)
-        return false
-
-    # _ISNEXTSYMBOL - Determines whether the next symbol in the text stream would match the inputted symbol.
-    _IsNextSymbol: (symbol) =>
-        for a in [ 0 .. symbol.length - 1 ]
-            return false if @_PeekCharacter(a) isnt symbol[a]
-        return true
-
-    # _CURRENTBLOCK - Gets the current block for which code is being processed from the block stack.
-    _CurrentBlock: ->
-        return null if !@_BlockStack.length
-        return @_BlockStack[@_BlockStack.length - 1]
-
     # _PROCESSCOMMENT - Creates an inline comment token.
     _ProcessComment: ->
         @_CurrentToken.Type = "Comment"
         @_ProcessUntil('\n')
-
     # _PROCESSCONTENT - Continuxes processing the content of a block.
     _ProcessContent: ->
         @_CurrentToken.Type = @_CurrentBlock().Content
-        @_Continue = !@_ProcessUntil(@_CurrentBlock().Close)
-
-    # _PROCESSENCLOSURE - Pushes and pops the current scope that's being processed.
+        if @_Lexicon.IsEquivalent("\n", @_CurrentBlock().Close)
+            @_ProcessUntil('\n')
+        else
+            @_Continue = !@_ProcessUntil(@_Lexicon.Get(@_CurrentBlock().Close))
+    # _PROCESSENCLOSURE - Pushes and pops the current block scope that's being processed.
     _ProcessEnclosure: ->
+
         if @_IsCloseForCurrentBlock(@_CurrentToken.Value())
             block = @_BlockStack.pop()
             @_CurrentToken.Type = @_CurrentToken.Type.replace("Open", "Close")
         else
             @_CurrentToken.Type = @_CurrentToken.Type.replace("Close", "Open")
-            block = @_Lexicon.ResolveBlock(@_CurrentToken.Value())
+            block = @_Lexicon.ResolveBlock(@_CurrentToken.Type)
             if block?
                 @_Continue = true
                 @_BlockStack.push(block)
         return undefined
-
     # _PROCESSNUMBER - Creates a numeric literal token out of adjacent number characters.
     _ProcessNumber: ->
         @_CurrentToken.Type = "Literal.Number"
         @_ProcessUntil( (x) => !@_Lexicon.IsNumber(x) )
-
     # _PROCESSYMBOLIC - Creates a symbolic token out of adjacent and compatible characters.
     #
     #   Symbolics are defined here as any language-specific construct consisting of non-word characters. This encompasses
     #   enclosure characters (e.g. '{ }' or '[ ]' or '" "') as well as operator characters (e.g. '+' or '-' or '+=').
     _ProcessSymbolic: ->
-
         # Append characters so we can match the maximum-length symbols first
         @_CurrentToken.Add(@_PeekCharacter(a)) for a in [ 0 .. @_Lexicon.MaxCharsPerSymbolic - 1 ]
 
@@ -161,16 +156,12 @@ exports.CodeStream = class CodeStream
         @_CurrentToken.Type ?= @_Lexicon.ResolveSymbolic(ctTokenValue)
         @_Skip(ctTokenValue.length)
 
-        # Exit this method here if the symbol cannot be resolved
-        if !@_CurrentToken.Type?
-            @_CurrentToken.Type = "Unknown"
-            return undefined
-
-        if @_Lexicon.IsEnclosure(ctTokenValue)
-            @_ProcessEnclosure()
+        switch
+            when !@_CurrentToken.Type?                      then @_CurrentToken.Type = "Unknown"
+            when @_Lexicon.IsEnclosure(ctTokenValue)        then @_ProcessEnclosure()
+            when @_CurrentToken.Type.Contains("Comment")    then @_ProcessComment()
 
         return undefined
-
     # _PROCESSUNTIL - Repeatedly adds characters to the current token until a specific stop condition is met.
     #
     #   OUTPUT:
@@ -186,7 +177,6 @@ exports.CodeStream = class CodeStream
     #               string containing the character(s) that will stop processing or a predicate function that accepts a
     #               string input and returns 'true' when processing should terminate or 'false' otherwise.
     _ProcessUntil: (stop = "\n") ->
-
         switch type(stop)
             when 'string'
                 while ( !@_IsNextSymbol("\n") && !@_IsNextSymbol(stop) && !@EOS() )
@@ -196,22 +186,30 @@ exports.CodeStream = class CodeStream
                 while ( !@_IsNextSymbol("\n") && !stop(@_PeekCharacter()) && !@EOS() )
                     @_CurrentToken.Add(@_ReadCharacter())
 
-        return false if @EOS() || @_IsNextSymbol("\n")
+        isNewLineNext = @_IsNextSymbol("\n")
+        return false if @EOS() || (isNewLineNext && stop isnt "\n")
         return true
 
     # _PROCESSWHITESPACE - Creates a single token out of adjacent whitespace characters.
+    #
+    #   This method processes blank, empty space within text.
     _ProcessWhiteSpace: ->
         @_CurrentToken.Type = "WhiteSpace"
         @_ProcessUntil( (x) => !@_Lexicon.IsWhiteSpace(x) )
-
     # _PROCESSWORD - Creates a single token that consists of some kind of word.
+    #
+    #   This method processes word elements such as variable names, keywords, or symbolic literals (e.g. 'null', 'true',
+    #   'false', etc.).
     _ProcessWord: ->
         @_ProcessUntil( (x) => !@_Lexicon.IsWordCharacter(x) )
         @_CurrentToken.Type = @_Lexicon.ResolveWord(@_CurrentToken.Value())
-
+    # _RESUMEPROCESSING - Determines whether processing of a block's contents should be resumed.
+    #
+    #   This test is useful when tokenizing code whose logic spans multiple lines in the source file.
     _ResumeProcessing: ->
         return false if !@_Continue
         return false if !(@_CurrentBlock()?.Content?)
+        return false if @_IsNextSymbol(@_CurrentBlock().Close)
         return true
 
 
@@ -219,6 +217,8 @@ exports.CodeStream = class CodeStream
     ## PUBLIC METHODS ##
     # EOS - Determines whether or not the end of the text stream has been reached.
     EOS: -> return ( @_Text.length == 0 || @_Index >= @_Text.length )
+
+    OpenBlocks: -> return @_BlockStack
     # READTOKEN - Gets the next available token in the code stream, consuming its characters in the process.
     #
     #   SYNTAX:
@@ -243,13 +243,12 @@ exports.CodeStream = class CodeStream
                 @_LineNumber++
 
             when @_ResumeProcessing()                 then @_ProcessContent()
-            when char is @_Lexicon.Symbols.Comment    then @_ProcessComment()
+
             when @_Lexicon.IsOpenWordCharacter(char)  then @_ProcessWord()
             when @_Lexicon.IsWhiteSpace(char)         then @_ProcessWhiteSpace()
             when @_Lexicon.IsNumber(char)             then @_ProcessNumber()
 
             else @_ProcessSymbolic()
-
 
         return @_CurrentToken
 

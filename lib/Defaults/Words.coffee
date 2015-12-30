@@ -25,8 +25,10 @@ module.exports =
 
         # OPERATOR - Keywords that behave like operators.
         Operator:
+            And:                            "and"
             Delete:                         "delete"
             New:                            "new"
+            Or:                             "or"
             Size:                           "sizeof"
             Type:                           "typeof"
 
@@ -55,17 +57,19 @@ module.exports =
             Base:                           [ "base", "super" ]
             Class:                          "class"
             Enumeration:                    "enum"
+            Extends:                        [ "extend", "extends" ]
             Namespace:                      "namespace"
             Structure:                      "struct"
             This:                           [ "self", "this" ]
 
+    # LITERAL - A listing of natively available literal values.
     Literal:
         Boolean:
             False:                          "false"
             True:                           "true"
         Null:                               "null"
 
-
+    # TYPE - A listing of natively available entity types.
     Type:
         Primitive:
             Character:                      "char"
@@ -77,7 +81,7 @@ module.exports =
             String:                         "string"
             Void:                           "void"
 
-    WhiteSpace:                             [ " ", "    " ]
+    WhiteSpace:                             [ " ", "\t" ]
 
     # Word - A listing of characters that make up ordinary code words or variable names.
     Word:

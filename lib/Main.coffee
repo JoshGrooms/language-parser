@@ -1,17 +1,16 @@
 # CHANGELOG
 # Written by Josh Grooms on 20151218
 
-{ clone, overload }     = require('./Utilities/ObjectFunctions')
+{ clone, overload, type }   = require('./Utilities/ObjectFunctions')
+CodeFile                    = require('./Elements/CodeFile')
+{ CodeStream, Token }       = require('./Elements/CodeStream')
+DebugView                   = require('./DebugView');
+Editor                      = require('./Editor');
+DynamicGrammar              = require('./DynamicGrammar')
+DynamicRegistry             = require('./DynamicRegistry')
 
-CodeFile                = require('./Elements/CodeFile')
-{ CodeStream, Token }   = require('./Elements/CodeStream')
-{ CompositeDisposable } = require('atom');
-DebugView               = require('./DebugView');
-Editor                  = require('./Editor');
-# { Lexicon, Symbols }    = require('./Defaults');
-DynamicGrammar          = require('./DynamicGrammar')
-DynamicRegistry         = require('./DynamicRegistry')
-
+{ CompositeDisposable }     = require('atom');
+fs                          = require('fs')
 
 module.exports = LanguageParser =
 
@@ -21,11 +20,16 @@ module.exports = LanguageParser =
     DefaultLexicon:     null
     Editor:             null
     Grammar:            null
+    PackagePath:        null
     Subscriptions:      null
     UI:                 null
 
 
-
+    ### Testing this out
+    on some
+    additional comments
+    hello everyone
+    ###
 
 
     ## ATOM PACKAGE METHODS ##
@@ -35,13 +39,17 @@ module.exports = LanguageParser =
 
         @DefaultLexicon = require('./Defaults/Lexicon')
         @Editor = new Editor();
+        @PackagePath = atom.packages.resolvePackagePath('language-parser')
         @Subscriptions = new CompositeDisposable;
         @UI = new DebugView();
+
+        @Subscriptions.add( atom.commands.add('atom-workspace', 'debug-panel:toggle': => @Toggle()) );
+
+        @_LoadLexicons()
 
         @Grammar = new DynamicGrammar(this, atom.grammars)
         atom.grammars.addGrammar(@Grammar)
 
-        @Subscriptions.add( atom.commands.add('atom-workspace', 'debug-panel:toggle': => @Toggle()) );
 
 
     deactivate: ->
@@ -54,6 +62,14 @@ module.exports = LanguageParser =
 
 
     ## PRIVATE UTILITIES ##
+    _LoadLexicons: ->
+
+        lexFiles = fs.readdirSync(@PackagePath + '/lib/Languages')
+        for file in lexFiles
+            ctLex = clone(@DefaultLexicon)
+            overload( ctLex, require("./Languages/" + file) )
+            @_Lexicons[file.split('.')[0]] = ctLex
+
     _GenerateCodeFile: (id) ->
         file = new CodeFile(@Editor)
         @_CodeFiles[id] = file
@@ -81,18 +97,18 @@ module.exports = LanguageParser =
 
         file = new CodeFile(this)
         @_CodeFiles[id] = file
-
         return file
 
 
     RequestLexicon: (extension) ->
         return @DefaultLexicon if !extension?
         return lexicon if lexicon = @_Lexicons[extension]
-
-        lexicon = clone(@DefaultLexicon)
-        overload( lexicon, require("./Languages/#{extension.toLowerCase()}.coffee") )
-        @_Lexicons[extension] = lexicon
-
-        return lexicon
+        return @DefaultLexicon
+        #
+        # lexicon = clone(@DefaultLexicon)
+        # overload( lexicon, require("./Languages/#{extension.toLowerCase()}.coffee") )
+        # @_Lexicons[extension] = lexicon
+        #
+        # return lexicon
         # console.log(@DefaultLexicon)
         # return @DefaultLexicon

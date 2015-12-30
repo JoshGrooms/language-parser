@@ -146,7 +146,7 @@ exports.find = find = (x, value) ->
 exports.overload = overload = (x, y) ->
     return x if type(x) != type(y) != 'object'
 
-    for k, v of y when x[k] isnt undefined
+    for k, v of y # when x[k] isnt undefined
         if type(x[k]) == type(v) == 'object'
             overload(x[k], v)
         else

@@ -61,7 +61,7 @@ module.exports =
             Multiplication:                 "*"
             MultiplicationAssignment:       "*="
             Subtraction:                    "-"
-            SubtractionAssignment:          "-="
+            SubtractionAssignment:          "-="            
 
         Symbol:
             Comment:                        "//"

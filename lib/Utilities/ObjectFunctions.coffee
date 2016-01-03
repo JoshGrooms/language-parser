@@ -2,6 +2,8 @@
 # Written by Josh Grooms on 20151221
 
 
+
+# CLONE - Creates a deep copy of any object.
 exports.clone = clone = (x) ->
     return x if !x? || typeof(x) isnt 'object'
 
@@ -19,10 +21,7 @@ exports.clone = clone = (x) ->
     y[k] = clone x[k] for k of x
     return y
 
-
-
-
-
+# ISFIELD - Determines whether an object contains a specific field name anywhere within its hierarchy.
 exports.isfield = isfield = (x, field) ->
     return false if type(x) isnt 'object'
     for k, v of x
@@ -79,7 +78,7 @@ exports.type = type = (x) ->
 
     return converter[Object.prototype.toString.call(x)]
 
-# CONTAINS - Determines whether or not a particular value exists within a data object.
+# CONTAINS - Determines whether a particular value exists within a data object.
 #
 #   SYNTAX:
 #       b = contains(x, value)
@@ -153,80 +152,3 @@ exports.overload = overload = (x, y) ->
             x[k] = v
 
     return x
-
-
-# exports.search = search = (x, value, fields) ->
-#     return null if type(x) isnt 'object'
-#
-#     fields = fields.split('.')
-#     nfields = fields.length
-#
-#     idxField = 0
-#     ctObject = x
-#     ltObject = x
-#     objStack = [ x ]
-#
-#     results = [ ]
-#     ctResult = ""
-#
-#
-#     while ( idxField < nfields )
-#
-#         ctObject = objStack[objStack.length - 1]
-#         ctField = fields[idxField]
-#
-#         if isfield(ctObject, ctField)
-#
-#             if ctObject[ctField] is value
-#
-#
-#             objStack.push(ctObject)
-#             ctObject = ctObject[fields[idxField]]
-#
-#         else
-#             for k, v of ctObject
-#                 if type(v) is 'object' && isfield(v, fields[idxField])
-#                     objStack.push(v)
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#     ctValue = null
-#     ctObject = x
-#
-#     for k, v of x
-#         if type(v) is 'object'
-#             search
-#
-#
-#     for field in fields
-#         if isfield(ctObject, field)
-#             ctValue = ctValue[field]
-#
-#
-#
-#
-#     idxField = 0
-#     if x[fields[0]]?
-#         search
-#
-#
-#     for k, v of x
-#         if k is field
-#
-#
-#     for field in fields
-#         for k, v of x
-#             if k is field
-#                 if type(k) is 'object'
-#
-#
-#     for k, v of x
-#         if k in fields
-#             if type(v) is 'object'

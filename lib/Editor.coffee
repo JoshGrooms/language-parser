@@ -40,6 +40,11 @@ module.exports = class Editor
                 txt = txt.concat(editor.getText())
         return txt
 
+    GetLine: (lineNum) -> return @ActiveEditor.lineTextForBufferRow(lineNum)
+
+    GetLines: (start, end) -> return @ActiveEditor.getTextInBufferRange([ [start, 0], [end + 1, 0] ])
+
+
     # GETTEXT - Gets the text found within the currently active text editor.
     #
     #   SYNTAX:

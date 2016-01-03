@@ -9,32 +9,28 @@ module.exports =
     IsStaticallyTyped:  false
 
 
-
-
-
-
-    # Blocks:
-    #     Group:
-    #         Open:       "Symbols.Enclosure.Open.Group"
-    #         Content:    "Variable.Argument.Input"
-    #         Close:      "Symbols.Enclosure.Close.Group"
-
     Symbols:
         Enclosure:
             Close:
                 Block:          [ "}", "@Outdent" ]
                 # Comment:        "###"
+                Character:      ""
                 Comment:
                     Block:      "###"
                     # Inline:     "\n"
+                String:         [ '\'', "\"" ]
             Open:
                 Block:          [ "{", "@Indent" ]
                 # Comment:        "###"
+                Character:      ""
                 Comment:
                     Block:      "###"
                     # Inline:     "#"
+                String:         [ '\'', "\"" ]
 
         Operator:
+            Logical:
+                Existential:    "?"
             Symbol:
                 Comment:        "#"
                 Preprocessor:   ""
@@ -48,10 +44,33 @@ module.exports =
                 Finally:        "finally"
                 In:             "in"
                 Loop:           "loop"
+                Unless:         "unless"
                 When:           "when"
+
+            Literal:
+                Undefined:      "undefined"
+
+            Operator:
+                Instance:       "instanceof"
+
+            Permission:         ""
 
             Preprocessor:
                 Import:         "require"
+
+            Qualifer:           ""
+
+        Type:
+            Primitive:
+                Array:          "Array"
+                Boolean:        "Boolean"
+                Date:           "Date"
+                Function:       "Function"
+                Number:         "Number"
+                Object:         "Object"
+                Regex:          "RegExp"
+                String:         "String"
+
 
 
     Declarations:
@@ -75,6 +94,7 @@ module.exports =
 
     SpecialDefinitions:
         Arguments:      null
+        Expression:     null
         Indent:         null
         Name:           null
         Outdent:        null

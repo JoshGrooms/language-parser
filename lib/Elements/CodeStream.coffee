@@ -3,8 +3,7 @@
 
 require('../Utilities/ArrayExtensions')
 require('../Utilities/StringExtensions')
-{ type } = require('../Utilities/ObjectFunctions')
-# { Lexicon, Symbols } = require('../Defaults')
+{ clone, type } = require('../Utilities/ObjectFunctions')
 
 
 
@@ -32,40 +31,40 @@ exports.Token = class Token
 
 
 
-# CODESTREAM - A buffered stream of source code text.
+# CODESTREAM - A universal tokenizer that decomposes a buffered stream of source code text.
 exports.CodeStream = class CodeStream
+    # _BLOCKSTACK - A stack whose elements represent unclosed blocks.
     _BlockStack:    [ ]
-    _Continue:      false
+    # _CURRENTTOKEN - The source code token that is currently being constructed and identified.
     _CurrentToken:  null
+    # _LEXICON - The language specification that is currently being used to tokenize text.
     _Lexicon:       null
-    _LineNumber:    0
-    _Indentation:   0
+    # _INDEX - The index of the next unprocessed character in the source text string.
     _Index:         0
+    # _TEXT - The source code text string that is currently being tokenized.
     _Text:          ""
-    _TokenQueue:    [ ]
+
 
 
     ## CONSTRUCTOR ##
+    # CODESTREAM - Constructs a new tokenizer object to interpret a string of source code text.
     constructor: (@_Text, @_Lexicon) ->
         @_BlockStack    = [ ]
-        @_Continue      = false
         @_CurrentToken  = null
         @_Index         = 0
-        @_LineNumber    = 0
         @_Text          = @_Text.replace(/\r/gm, '')
-        @_TokenQueue    = [ ]
 
 
 
     ## PRIVATE UTILITIES ##
     # _CURRENTBLOCK - Gets the current block for which code is being processed from the block stack.
     _CurrentBlock: ->
-        return null if !@_BlockStack.length
+        return null unless @_BlockStack.length
         return @_BlockStack[@_BlockStack.length - 1]
     # _ISCLOSEFORCURRENTBLOCK - Determines if a symbol marks the close of a previously opened block.
     _IsCloseForCurrentBlock: (symbol) ->
-        return false if !@_CurrentBlock()?.Close?
-        return true if @_Lexicon.IsEquivalent(symbol, @_CurrentBlock().Close)
+        return false unless @_CurrentBlock()?.Close?
+        return true if symbol is @_CurrentBlock().Close
         return false
     # _ISNEXTSYMBOL - Determines whether the next symbol in the text stream would match the inputted symbol.
     _IsNextSymbol: (symbol) =>
@@ -111,25 +110,20 @@ exports.CodeStream = class CodeStream
     _ProcessComment: ->
         @_CurrentToken.Type = "Comment"
         @_ProcessUntil('\n')
-    # _PROCESSCONTENT - Continuxes processing the content of a block.
+    # _PROCESSCONTENT - Continues processing the content of a block.
     _ProcessContent: ->
         @_CurrentToken.Type = @_CurrentBlock().Content
-        if @_Lexicon.IsEquivalent("\n", @_CurrentBlock().Close)
-            @_ProcessUntil('\n')
-        else
-            @_Continue = !@_ProcessUntil(@_Lexicon.Get(@_CurrentBlock().Close))
+        @_ProcessUntil(@_CurrentBlock().Close)
     # _PROCESSENCLOSURE - Pushes and pops the current block scope that's being processed.
     _ProcessEnclosure: ->
-
         if @_IsCloseForCurrentBlock(@_CurrentToken.Value())
             block = @_BlockStack.pop()
             @_CurrentToken.Type = @_CurrentToken.Type.replace("Open", "Close")
         else
             @_CurrentToken.Type = @_CurrentToken.Type.replace("Close", "Open")
-            block = @_Lexicon.ResolveBlock(@_CurrentToken.Type)
-            if block?
-                @_Continue = true
-                @_BlockStack.push(block)
+            block = @_Lexicon.ResolveBlock(@_CurrentToken)
+            @_BlockStack.push(block) if block?
+
         return undefined
     # _PROCESSNUMBER - Creates a numeric literal token out of adjacent number characters.
     _ProcessNumber: ->
@@ -207,18 +201,28 @@ exports.CodeStream = class CodeStream
     #
     #   This test is useful when tokenizing code whose logic spans multiple lines in the source file.
     _ResumeProcessing: ->
-        return false if !@_Continue
-        return false if !(@_CurrentBlock()?.Content?)
+        return false unless @_CurrentBlock()?.Content?
         return false if @_IsNextSymbol(@_CurrentBlock().Close)
         return true
 
 
 
     ## PUBLIC METHODS ##
+
     # EOS - Determines whether or not the end of the text stream has been reached.
     EOS: -> return ( @_Text.length == 0 || @_Index >= @_Text.length )
 
-    OpenBlocks: -> return @_BlockStack
+    # OPENBLOCKS - Generates a copy of the currently open block list for this text stream.
+    #
+    #   SYNTAX:
+    #       blocks = @OpenBlocks()
+    #
+    #   OUTPUT:
+    #       blocks:     ARRAY
+    #                   A deep copy of the currently active block stack. This stack is used internally to monitor the opening
+    #                   and closing of blocks while processing text.
+    OpenBlocks: -> return clone(@_BlockStack)
+
     # READTOKEN - Gets the next available token in the code stream, consuming its characters in the process.
     #
     #   SYNTAX:
@@ -229,7 +233,6 @@ exports.CodeStream = class CodeStream
     #
     ReadToken: ->
 
-        return @_TokenQueue.pop() if @_TokenQueue.length
         return null if @EOS()
 
         char = @_PeekCharacter()
@@ -240,12 +243,10 @@ exports.CodeStream = class CodeStream
             when char is '\n'
                 @_CurrentToken.Add(@_ReadCharacter())
                 @_CurrentToken.Type = "NewLine"
-                @_LineNumber++
 
             when @_ResumeProcessing()                 then @_ProcessContent()
-
-            when @_Lexicon.IsOpenWordCharacter(char)  then @_ProcessWord()
             when @_Lexicon.IsWhiteSpace(char)         then @_ProcessWhiteSpace()
+            when @_Lexicon.IsOpenWordCharacter(char)  then @_ProcessWord()
             when @_Lexicon.IsNumber(char)             then @_ProcessNumber()
 
             else @_ProcessSymbolic()
@@ -254,10 +255,8 @@ exports.CodeStream = class CodeStream
 
 
 
-    Reset: (@_Text) ->
-        @_BlockStack    = [ ]
-        @_Continue      = false
+    Reset: (@_Text, @_BlockStack) ->
+        @_BlockStack    = [ ] if !@_BlockStack?
         @_CurrentToken  = null
         @_Index         = 0
-        @_LineNumber    = 0
         @_Text          = @_Text.replace(/\r/gm, '')

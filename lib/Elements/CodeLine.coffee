@@ -8,25 +8,34 @@ require('../Utilities/ArrayExtensions')
 module.exports = class CodeLine
 
 
-    _IsClosed:      false
-
+    BlockStack:     [ ]
+    IsClosed:       false
     Tokens:         [ ]
-    LineNumber:     0
     Type:           ""
 
 
 
-    constructor: (@LineNumber, token = null)->
-        @_IsClosed  = false
-        @Tokens     = [ ]
-        @Type       = ""
+    constructor: (token = null) ->
+
+        @BlockStack     = [ ]
+        @IsClosed       = false
+        @Tokens         = [ ]
+        @Type           = ""
 
         @Add(token) if token?
 
 
 
     Add: (token) ->
-        return false if @_IsClosed
+        return false if @IsClosed
         @Tokens.Merge(token)
-        @_IsClosed = true if token.Type is "NewLine"
+        @IsClosed = true if token.Type is "NewLine"
         return true
+
+
+
+    
+    ToString: ->
+        line = ""
+        line += token.Value() for token in @Tokens
+        return line

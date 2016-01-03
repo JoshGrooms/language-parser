@@ -7,7 +7,6 @@ CodeFile                    = require('./Elements/CodeFile')
 DebugView                   = require('./DebugView');
 Editor                      = require('./Editor');
 DynamicGrammar              = require('./DynamicGrammar')
-DynamicRegistry             = require('./DynamicRegistry')
 
 { CompositeDisposable }     = require('atom');
 fs                          = require('fs')
@@ -24,12 +23,6 @@ module.exports = LanguageParser =
     Subscriptions:      null
     UI:                 null
 
-
-    ### Testing this out
-    on some
-    additional comments
-    hello everyone
-    ###
 
 
     ## ATOM PACKAGE METHODS ##
@@ -50,8 +43,6 @@ module.exports = LanguageParser =
         @Grammar = new DynamicGrammar(this, atom.grammars)
         atom.grammars.addGrammar(@Grammar)
 
-
-
     deactivate: ->
         @Subscriptions.dispose();
         @UI.destroy();
@@ -59,6 +50,7 @@ module.exports = LanguageParser =
 
         for k, file of @_CodeFiles
             file.destroy()
+
 
 
     ## PRIVATE UTILITIES ##
@@ -69,6 +61,8 @@ module.exports = LanguageParser =
             ctLex = clone(@DefaultLexicon)
             overload( ctLex, require("./Languages/" + file) )
             @_Lexicons[file.split('.')[0]] = ctLex
+
+        return undefined
 
     _GenerateCodeFile: (id) ->
         file = new CodeFile(@Editor)
@@ -101,14 +95,6 @@ module.exports = LanguageParser =
 
 
     RequestLexicon: (extension) ->
-        return @DefaultLexicon if !extension?
+        return @DefaultLexicon unless extension?
         return lexicon if lexicon = @_Lexicons[extension]
         return @DefaultLexicon
-        #
-        # lexicon = clone(@DefaultLexicon)
-        # overload( lexicon, require("./Languages/#{extension.toLowerCase()}.coffee") )
-        # @_Lexicons[extension] = lexicon
-        #
-        # return lexicon
-        # console.log(@DefaultLexicon)
-        # return @DefaultLexicon

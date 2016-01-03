@@ -3,7 +3,7 @@
 
 require('../Utilities/StringExtensions')
 
-{ type, contains, find }    = require('../Utilities/ObjectFunctions')
+{ type, clone, contains, find }    = require('../Utilities/ObjectFunctions')
 
 {
     Access,
@@ -33,6 +33,8 @@ module.exports =
     AreDeclarationsDefinitions:         true
 
     CanEntitiesSpanFiles:               false
+
+    TagEscapedCharacters:               false
 
     IsEvaluationLazy:                   false
     IsFunctional:                       true
@@ -80,13 +82,6 @@ module.exports =
         return true if openTag is closeTag
         return false
 
-
-
-
-    # Resolve: (entity) -> return find(@Symbols, entity)
-
-    # ResolveCharacter: (char) -> return find(@Symbols, char)
-
     ResolveEnclosure: (char) ->
         enc = find(@Symbols.Enclosure, char)
         return null if !enc?
@@ -104,7 +99,7 @@ module.exports =
 
     ResolveWord: (word) ->
         word = find(@Words, word)
-        word ?= "Variable"
+        word ?= @DefaultTag
         return "Words." + word
 
     ResolveBlock: (enclosure, initial = null) ->
@@ -113,15 +108,27 @@ module.exports =
 
         for k, v of initial when v?
             if type(v) is 'object'
-                return block if block = @ResolveBlock(enclosure, v)
+                return clone(block) if block = @ResolveBlock(enclosure, v)
 
-            if v.Open is enclosure
+            if v.Open is enclosure.Type
                 block = v
                 break
 
         return null if !block?
 
-        return block
+        newBlock = clone(block)
+
+        newBlock.Open = @Get(newBlock.Open)
+        newBlock.Close = @Get(newBlock.Close)
+
+        if type(newBlock.Open) is 'array'
+            idxSym = newBlock.Open.indexOf(enclosure.Value())
+            if idxSym isnt -1
+                newBlock.Open = newBlock.Open[idxSym]
+                newBlock.Close = newBlock.Close[idxSym]
+
+        # return clone(block)
+        return newBlock
 
 
 

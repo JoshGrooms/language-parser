@@ -87,14 +87,13 @@ module.exports = class DynamicGrammar extends Grammar
     tokenizeLine: (line, ruleStack, firstLine = false, compatibilityMode = true) ->
 
         tags = [ ]
-        tokens = @_CodeFile.RetokenizeLine(line, firstLine)?.Tokens
+        codeLine = @_CodeFile.RetokenizeLine(line, firstLine)
 
-        if tokens?
-            for token in tokens when token?
-                tag = token.Type.replace(' ', '.').toLowerCase()
-                tags.push(@_StartID(tag))
-                tags.push(token.Length())
-                tags.push(@_EndID(tag))
+        for token in codeLine.Tokens
+            tag = token.Type.replace(' ', '.').toLowerCase()
+            tags.push(@_StartID(tag))
+            tags.push(token.Length())
+            tags.push(@_EndID(tag))
 
         ruleStack = { }
         return { line, tags, ruleStack }

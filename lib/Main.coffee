@@ -11,6 +11,8 @@ DynamicGrammar              = require('./DynamicGrammar')
 { CompositeDisposable }     = require('atom');
 fs                          = require('fs')
 
+
+
 module.exports = LanguageParser =
 
     _CodeFiles:         { }
@@ -30,11 +32,11 @@ module.exports = LanguageParser =
         @_CodeFiles = { };
         @_Lexicons = { };
 
-        @DefaultLexicon = require('./Defaults/Lexicon')
-        @Editor = new Editor();
-        @PackagePath = atom.packages.resolvePackagePath('language-parser')
-        @Subscriptions = new CompositeDisposable;
-        @UI = new DebugView();
+        @DefaultLexicon     = require('./Defaults/Lexicon')
+        @Editor             = new Editor();
+        @PackagePath        = atom.packages.resolvePackagePath('language-parser')
+        @Subscriptions      = new CompositeDisposable;
+        @UI                 = new DebugView();
 
         @Subscriptions.add( atom.commands.add('atom-workspace', 'debug-panel:toggle': => @Toggle()) );
 
@@ -54,8 +56,9 @@ module.exports = LanguageParser =
 
 
     ## PRIVATE UTILITIES ##
-    _LoadLexicons: ->
 
+    # _LOADLEXICONS - Initializes all available dictionaries containing language-specific customizations.
+    _LoadLexicons: ->
         lexFiles = fs.readdirSync(@PackagePath + '/lib/Languages')
         for file in lexFiles
             ctLex = clone(@DefaultLexicon)
@@ -93,8 +96,28 @@ module.exports = LanguageParser =
         @_CodeFiles[id] = file
         return file
 
-
+    # REQUESTLEXICON - Gets a customized language dictionary that is appropriate for a specified file extension.
+    #
+    #   This method returns a reference to the lexicon that is meant to be in conjunction with specific file types. If no
+    #   such dictionary has been created to handle the inputted extension, then this method will return the default lexicon
+    #   data object.
+    #
+    #   SYNTAX:
+    #       lexicon = @RequestLexicon(extension)
+    #
+    #   OUTPUT:
+    #       lexicon:    OBJECT
+    #                   An object that describes the symbols and lexical structure of a programming language. The specific
+    #                   lexicon instance that is returned depends on the inputted file type. However, if no specific lexicon
+    #                   matching the 'extension' argument can be found, then this method will return a default lexicon that
+    #                   is suitable for many C-style languages.
+    #
+    #   INPUT:
+    #       extension:  STRING
+    #                   A string containing the extension of the file for which a lexicon is being requested. This argument
+    #                   is simply the extension part of the file's name string (i.e. 'example' in '/path/to/file.example').
     RequestLexicon: (extension) ->
         return @DefaultLexicon unless extension?
+        extension = extension.replace(/^\./, '')
         return lexicon if lexicon = @_Lexicons[extension]
         return @DefaultLexicon

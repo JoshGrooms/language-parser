@@ -40,6 +40,8 @@ module.exports = class Editor
                 txt = txt.concat(editor.getText())
         return txt
 
+    GetIndentLevel: (lineNum) -> return @ActiveEditor.indentationForBufferRow(lineNum)
+
     GetLine: (lineNum) -> return @ActiveEditor.lineTextForBufferRow(lineNum)
 
     GetLines: (start, end) -> return @ActiveEditor.getTextInBufferRange([ [start, 0], [end + 1, 0] ])
@@ -49,8 +51,7 @@ module.exports = class Editor
     #
     #   SYNTAX:
     #       s = @GetText()
-    GetText: ->
-        return @ActiveEditor.getText()
+    GetText: -> return @ActiveEditor.getText()
 
 
 
@@ -106,8 +107,7 @@ module.exports = class Editor
     #   OUTPUT:
     #       s:      STRING
     #               The string of text currently selected or highlighted by the cursor.
-    GetSelection: ->
-        return @ActiveEditor.getSelectedText()
+    GetSelection: -> return @ActiveEditor.getSelectedText()
 
     # SELECTLEFT - Selects characters to the left of the cursor position in the active text editor.
     #

@@ -12,21 +12,29 @@ exports.Token = class Token
     _Buffer:        [ ]
     Type:           ""
 
-    constructor: (char = null) ->
+    constructor: (char = null, type = "") ->
         @_Buffer    = if char? then [ char ] else [ ]
-
+        @Type      = type
 
     # ADD - Appends one or more characters to the end of the current token value.
     Add: (char)     ->
         @_Buffer.Merge(char)
         return undefined
+
+    IsSelector: (selector) ->
+        return false unless type(selector) is 'string'
+        selectors = selector.split('.')
+        for s in selectors
+            return false unless @Type.Contains(s)    
+        return true
+
+
     # LENGTH - Gets the number of individual characters present in this token.
     Length:         -> return @_Buffer.length
     # REMOVE - Deletes one or more characters from the end of the token.
     Remove: (n = 1) ->
         @_Buffer[@Length() - n .. @Length() - 1] = [ ]
         return undefined
-
     Value:          -> return @_Buffer.join('')
 
 
@@ -106,14 +114,17 @@ exports.CodeStream = class CodeStream
 
 
     ## PRIVATE TOKENIZING METHODS ##
+
     # _PROCESSCOMMENT - Creates an inline comment token.
     _ProcessComment: ->
         @_CurrentToken.Type = "Comment"
         @_ProcessUntil('\n')
+
     # _PROCESSCONTENT - Continues processing the content of a block.
     _ProcessContent: ->
         @_CurrentToken.Type = @_CurrentBlock().Content
         @_ProcessUntil(@_CurrentBlock().Close)
+
     # _PROCESSENCLOSURE - Pushes and pops the current block scope that's being processed.
     _ProcessEnclosure: ->
         if @_IsCloseForCurrentBlock(@_CurrentToken.Value())
@@ -125,10 +136,12 @@ exports.CodeStream = class CodeStream
             @_BlockStack.push(block) if block?
 
         return undefined
+
     # _PROCESSNUMBER - Creates a numeric literal token out of adjacent number characters.
     _ProcessNumber: ->
         @_CurrentToken.Type = "Literal.Number"
         @_ProcessUntil( (x) => !@_Lexicon.IsNumber(x) )
+
     # _PROCESSYMBOLIC - Creates a symbolic token out of adjacent and compatible characters.
     #
     #   Symbolics are defined here as any language-specific construct consisting of non-word characters. This encompasses
@@ -156,6 +169,7 @@ exports.CodeStream = class CodeStream
             when @_CurrentToken.Type.Contains("Comment")    then @_ProcessComment()
 
         return undefined
+
     # _PROCESSUNTIL - Repeatedly adds characters to the current token until a specific stop condition is met.
     #
     #   OUTPUT:
@@ -188,8 +202,12 @@ exports.CodeStream = class CodeStream
     #
     #   This method processes blank, empty space within text.
     _ProcessWhiteSpace: ->
-        @_CurrentToken.Type = "WhiteSpace"
-        @_ProcessUntil( (x) => !@_Lexicon.IsWhiteSpace(x) )
+        @_CurrentToken.Type = @_Lexicon.ResolveWhiteSpace(@_PeekCharacter())
+        if @_CurrentToken.IsSelector("NewLine")
+            @_CurrentToken.Add(@_ReadCharacter())
+        else
+            @_ProcessUntil( (x) => !@_Lexicon.IsWhiteSpace(x) )
+
     # _PROCESSWORD - Creates a single token that consists of some kind of word.
     #
     #   This method processes word elements such as variable names, keywords, or symbolic literals (e.g. 'null', 'true',
@@ -197,6 +215,7 @@ exports.CodeStream = class CodeStream
     _ProcessWord: ->
         @_ProcessUntil( (x) => !@_Lexicon.IsWordCharacter(x) )
         @_CurrentToken.Type = @_Lexicon.ResolveWord(@_CurrentToken.Value())
+
     # _RESUMEPROCESSING - Determines whether processing of a block's contents should be resumed.
     #
     #   This test is useful when tokenizing code whose logic spans multiple lines in the source file.
@@ -210,6 +229,13 @@ exports.CodeStream = class CodeStream
     ## PUBLIC METHODS ##
 
     # EOS - Determines whether or not the end of the text stream has been reached.
+    #
+    #   SYNTAX:
+    #       b = @EOS()
+    #
+    #   OUTPUT:
+    #       b:      BOOLEAN
+    #               A Boolean 'true' if the end of the stream (EOS) has been reached, or 'false' otherwise.
     EOS: -> return ( @_Text.length == 0 || @_Index >= @_Text.length )
 
     # OPENBLOCKS - Generates a copy of the currently open block list for this text stream.
@@ -240,9 +266,9 @@ exports.CodeStream = class CodeStream
 
         switch
 
-            when char is '\n'
-                @_CurrentToken.Add(@_ReadCharacter())
-                @_CurrentToken.Type = "NewLine"
+            # when char is '\n'
+            #     @_CurrentToken.Add(@_ReadCharacter())
+            #     @_CurrentToken.Type = "NewLine"
 
             when @_ResumeProcessing()                 then @_ProcessContent()
             when @_Lexicon.IsWhiteSpace(char)         then @_ProcessWhiteSpace()

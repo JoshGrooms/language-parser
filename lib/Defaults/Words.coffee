@@ -81,7 +81,11 @@ module.exports =
             String:                         "string"
             Void:                           "void"
 
-    WhiteSpace:                             [ " ", "\t" ]
+    WhiteSpace:
+        NewLine:                            "\n"
+        Space:                              " "
+        Tab:                                "\t"
+        # [ " ", "\t" ]
 
     # Word - A listing of characters that make up ordinary code words or variable names.
     Word:

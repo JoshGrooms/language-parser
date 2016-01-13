@@ -4,8 +4,6 @@
 { clone, overload, type }   = require('./Utilities/ObjectFunctions')
 CodeFile                    = require('./Elements/CodeFile')
 { CodeStream, Token }       = require('./Elements/CodeStream')
-DebugView                   = require('./DebugView');
-Editor                      = require('./Editor');
 DynamicGrammar              = require('./DynamicGrammar')
 
 { CompositeDisposable }     = require('atom');
@@ -15,11 +13,6 @@ fs                          = require('fs')
 
 module.exports = LanguageParser =
 
-    _CodeFiles:         { }
-    _Lexicons:          { }
-
-    DefaultLexicon:     null
-    Editor:             null
     Grammar:            null
     PackagePath:        null
     Subscriptions:      null
@@ -29,72 +22,21 @@ module.exports = LanguageParser =
 
     ## ATOM PACKAGE METHODS ##
     activate: (state) ->
-        @_CodeFiles = { };
-        @_Lexicons = { };
 
         @DefaultLexicon     = require('./Defaults/Lexicon')
-        @Editor             = new Editor();
         @PackagePath        = atom.packages.resolvePackagePath('language-parser')
-        @Subscriptions      = new CompositeDisposable;
-        @UI                 = new DebugView();
-
-        @Subscriptions.add( atom.commands.add('atom-workspace', 'debug-panel:toggle': => @Toggle()) );
-
-        @_LoadLexicons()
+        @Subscriptions      = new CompositeDisposable
 
         @Grammar = new DynamicGrammar(this, atom.grammars)
         atom.grammars.addGrammar(@Grammar)
 
     deactivate: ->
-        @Subscriptions.dispose();
-        @UI.destroy();
+        @Subscriptions.dispose()
         @Grammar.destroy()
-
-        for k, file of @_CodeFiles
-            file.destroy()
-
-
-
-    ## PRIVATE UTILITIES ##
-
-    # _LOADLEXICONS - Initializes all available dictionaries containing language-specific customizations.
-    _LoadLexicons: ->
-        lexFiles = fs.readdirSync(@PackagePath + '/lib/Languages')
-        for file in lexFiles
-            ctLex = clone(@DefaultLexicon)
-            overload( ctLex, require("./Languages/" + file) )
-            @_Lexicons[file.split('.')[0]] = ctLex
-
-        return undefined
-
-    _GenerateCodeFile: (id) ->
-        file = new CodeFile(@Editor)
-        @_CodeFiles[id] = file
-
 
 
 
     ## PUBLIC METHODS ##
-    Hide:       -> @UI.Hide();
-    Toggle:     -> if @UI.IsVisible() then @Hide() else @Show();
-
-    Show: ->
-        # @UI.Clear()
-        # cs = new CodeStream(@Editor.GetText())
-        #
-        # while (!cs.EOS())
-        #     token = cs.ReadToken()
-        #     @UI.WriteToken(token)
-        #
-        # @UI.Show();
-
-    RequestFile: ->
-        id = @Editor.ActiveEditor.id
-        return file if file = @_CodeFiles[id]
-
-        file = new CodeFile(this)
-        @_CodeFiles[id] = file
-        return file
 
     # REQUESTLEXICON - Gets a customized language dictionary that is appropriate for a specified file extension.
     #
@@ -116,8 +58,8 @@ module.exports = LanguageParser =
     #       extension:  STRING
     #                   A string containing the extension of the file for which a lexicon is being requested. This argument
     #                   is simply the extension part of the file's name string (i.e. 'example' in '/path/to/file.example').
-    RequestLexicon: (extension) ->
-        return @DefaultLexicon unless extension?
-        extension = extension.replace(/^\./, '')
-        return lexicon if lexicon = @_Lexicons[extension]
-        return @DefaultLexicon
+    # RequestLexicon: (extension) ->
+    #     return @DefaultLexicon unless extension?
+    #     extension = extension.replace(/^\./, '')
+    #     return lexicon if lexicon = @_Lexicons[extension]
+    #     return @DefaultLexicon

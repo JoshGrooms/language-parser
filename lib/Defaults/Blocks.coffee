@@ -20,103 +20,65 @@ module.exports =
 
     Default:
         # ACCESSIBILITY - How visible the block's internal contents are to the surrounding world.
-        Accessibility:          Access.Global
+        _Accessibility:          Access.Global
         # CLOSE - The symbol that defines the end of the block.
-        Close:                  'Symbols.Enclosure.Close.Block'
+        _Close:                  'Symbols.Enclosure.Close.Block'
         # CONTENTS - The tag to be applied to the block's contents.
-        Content:                null
-        Name:                   'Block'
+        _Content:                null
+        _Name:                   'Block'
         # OPEN - The symbol that defines the beginning of the block.
-        Open:                   'Symbols.Enclosure.Open.Block'
-        Parent:                 null
+        _Open:                   'Symbols.Enclosure.Open.Block'
+        _Parent:                 null
 
-        Prefix:                 null
+        _Prefix:                 null
 
-        Suffix:                 null
+        _Suffix:                 null
 
-        Tag:                    'source.block'
+        _Tag:                    'source.block'
         # VISIBILITY - How visible the block itself is to the surrounding world.
-        Visibility:             Access.Global
+        _Visibility:             Access.Global
 
 
     File:
-        Accessibility:          Access.Global
-        Name:                   'FileBlock'
-        Tag:                    'file.definition'
-        Visibility:             Access.Global
+        _Accessibility:          Access.Global
+        _Name:                   'FileBlock'
+        _Tag:                    'file.definition'
+        _Visibility:             Access.Global
 
 
     Character:
-        Close:                  'Symbols.Enclosure.Close.Character'
-        Content:                'Literal.Character.Content'
-        Name:                   'Character'
-        Open:                   'Symbols.Enclosure.Open.Character'
+        _Close:                  'Symbols.Enclosure.Close.Character'
+        _Content:                'Literal.Character.Content'
+        _Name:                   'Character'
+        _Open:                   'Symbols.Enclosure.Open.Character'
 
 
-    Class:
-        Accessibility:          Access.Global
-        Close:                  'Symbols.Enclosure.Close.Block'
-        Name:                   'ClassBlock'
-        Open:                   'Symbols.Enclosure.Open.Block'
-        Prefix:                 /class\s+@Type/
-        Visibility:             Access.Global
 
     Comment:
-        Block:
-            Accessibility:      Access.Restricted
-            Close:              'Symbols.Enclosure.Close.Comment.Block'
-            Content:            'Comment.Block.Content'
-            Name:               'BlockComment'
-            Open:               'Symbols.Enclosure.Open.Comment.Block'
-            Visibility:         Access.Restricted
+        _Accessibility:          Access.Restricted
+        _Close:                  'Symbols.Enclosure.Close.Comment.Block'
+        _Content:                'Comment.Block.Content'
+        _Name:                   'BlockComment'
+        _Open:                   'Symbols.Enclosure.Open.Comment.Block'
+        _Visibility:             Access.Restricted
 
-        Inline:
-            Accessibility:      Access.Restricted
-            Close:              'Symbols.Enclosure.Close.Comment.Inline'
-            Content:            'Comment.Inline.Content'
-            Name:               'InlineComment'
-            Open:               'Symbols.Enclosure.Open.Comment.Inline'
-            Visibility:         Access.Restricted
+        # Inline:
+        #     _Accessibility:      Access.Restricted
+        #     Close:              'Symbols.Enclosure.Close.Comment.Inline'
+        #     Content:            'Comment.Inline.Content'
+        #     Name:               'InlineComment'
+        #     Open:               'Symbols.Enclosure.Open.Comment.Inline'
+        #     Visibility:         Access.Restricted
 
     Group:
-        Accessibility:          Access.Global
-        Close:                  'Symbols.Enclosure.Close.Group'
-        Name:                   'Group'
-        Open:                   'Symbols.Enclosure.Open.Group'
-        Visibility:             Access.Global
+        _Accessibility:          Access.Global
+        _Close:                  'Symbols.Enclosure.Close.Group'
+        _Name:                   'Group'
+        _Open:                   'Symbols.Enclosure.Open.Group'
+        _Visibility:             Access.Global
 
     String:
-        Close:                  'Symbols.Enclosure.Close.String'
-        Content:                'Literal.String.Content'
-        Name:                   'String'
-        Open:                   'Symbols.Enclosure.Open.String'
-
-
-    # Function:
-    #     Accessibility:      Access.Restricted
-    #     Name:               "FunctionBlock"
-    #     Prefix:             ""
-    #     Visibility:         Access.Global
-    #
-    # Struct:
-    #     Accessibility:      Access.Global
-    #     Name:               'StructureBlock'
-    #     Signature:          "#{Symbols.Keyword.Type.Struct} @1"
-    #     Visibility:         Access.Global
-    #
-    #
-    # Loop:
-    #     For:
-    #         Accessibility:  Access.Global
-    #         Name:           "ForLoopBlock"
-    #         Prefix:         "#{Symbols.Keyword.Control.For}"
-    #         Visibility:     Access.Internal
-    #
-    #
-    # String:
-    #
-    #     Name:               "String"
-    #     Signature:
-    #         Close:          Symbols.Enclosure.Close.String
-    #         Content:        'literal.string.content'
-    #         Open:           Symbols.Enclosure.Open.String
+        _Close:                  'Symbols.Enclosure.Close.String'
+        _Content:                'Literal.String.Content'
+        _Name:                   'String'
+        _Open:                   'Symbols.Enclosure.Open.String'

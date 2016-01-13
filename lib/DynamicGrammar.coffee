@@ -1,48 +1,83 @@
 # CHANGELOG
 # Written by Josh Grooms on 20151224
 
+CodeFile                = require('./Elements/CodeFile')
 { CodeStream, Token }   = require('./Elements/CodeStream')
+{ clone, overload }               = require('./Utilities/ObjectFunctions')
 { Grammar }             = require('first-mate')
-
+{ CompositeDisposable}  = require('atom')
+fs                      = require('fs')
 
 
 module.exports = class DynamicGrammar extends Grammar
 
-    _CodeFile:  null
-    _LineCount: 0
-    _Progran:   null
+    _CodeFiles:         [ ]
+    _DefaultLexicon:    null
+    _Lexicons:          [ ]
+    _WorkingFile:       null
+    _WorkingEditor:     null
 
-    _EditorChangeCallback: null
+    # _CodeFile:          null
+    _Program:           null
+    _Subscriptions:     null
 
 
 
     ## CONSTRUCTOR & DESTRUCTOR ##
-    constructor: (@_Program, registry) ->
-        @_CodeFile = @_Program.RequestFile()
-        @_LineCount = 0
+    constructor: (@_Program) ->
+        @_CodeFiles     = [ ]
+        @_Subscriptions = new CompositeDisposable
+        @_Lexicons      = [ ]
 
-        @_EditorChangeCallback = atom.workspace.onDidChangeActivePaneItem(@_UpdateCodeFile)
+        @_LoadLexicons()
+        @_UpdateCodeFile()
+
+        @_Subscriptions.add(atom.workspace.onDidChangeActivePaneItem(@_UpdateCodeFile))
 
         options =
             fileTypes:  "coffee"
             name:       "Dynamic Language Parser"
             scopeName:  "source"
 
-        super(registry, options)
+        super(atom.grammars, options)
 
     destroy: ->
-        @_EditorChangeCallback.dispose()
+        @_Subscriptions.dispose()
+        for file in @_CodeFiles
+            file.destroy()
 
 
 
     ## PRIVATE UTILITIES ##
     _EndID: (scope) -> return @registry.endIdForScope(scope)
     _StartID: (scope) -> return @registry.startIdForScope(scope)
+
+    # _LOADLEXICONS - Initializes all available dictionaries containing language-specific customizations.
+    _LoadLexicons: ->
+        @_DefaultLexicon = require('./Defaults/Lexicon')
+        lexFiles = fs.readdirSync(@_Program.PackagePath + '/lib/Languages')
+        for file in lexFiles
+            ctLex = clone(@_DefaultLexicon)
+            overload( ctLex, require("./Languages/" + file) )
+            @_Lexicons[file.split('.')[0]] = ctLex
+
+        return undefined
     # _UPDATECODEFILE - Updates the working code file object for this grammar whenever the active pane item changes.
     #
     #   This method is executed whenever a user navigates to another tab within the Atom editor.
-    _UpdateCodeFile: => @_CodeFile = @_Program.RequestFile()
+    _UpdateCodeFile: =>
+        @_WorkingEditor = atom.workspace.getActiveTextEditor()
+        @_WorkingFile = @_CodeFiles[@_WorkingEditor.id]
 
+        unless @_WorkingFile?
+            filePath = @_WorkingEditor.getPath()
+            ext = filePath[ filePath.lastIndexOf('.') + 1 .. filePath.length - 1 ]
+
+            lex = @_Lexicons[ext]
+            lex ?= @_DefaultLexicon
+
+            @_CodeFiles[@_WorkingEditor.id] = new CodeFile(@_WorkingEditor, lex)
+            @_WorkingFile = @_CodeFiles[@_WorkingEditor.id]
 
 
     ## ATOM API METHODS ##
@@ -87,9 +122,11 @@ module.exports = class DynamicGrammar extends Grammar
     tokenizeLine: (line, ruleStack, firstLine = false, compatibilityMode = true) ->
 
         tags = [ ]
-        codeLine = @_CodeFile.RetokenizeLine(line, firstLine)
+        # codeLine = @_CodeFile.RetokenizeLine(line, firstLine)
+        codeLine = @_WorkingFile.RetokenizeLine(line, firstLine)
 
         for token in codeLine.Tokens
+            continue if token.Type.Contains("@")
             tag = token.Type.replace(' ', '.').toLowerCase()
             tags.push(@_StartID(tag))
             tags.push(token.Length())

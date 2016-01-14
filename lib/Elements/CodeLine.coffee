@@ -28,6 +28,8 @@ module.exports = class CodeLine
 
 
 
+    ## PUBLIC UTILITIES ##
+    # ADD - Appends a new token to the code line.
     Add: (token) ->
         return false if @IsClosed
         @Tokens.Merge(token)
@@ -35,8 +37,11 @@ module.exports = class CodeLine
         return true
 
 
+    # COUNT - Returns the number of tokens present in this code line.
+    Count: -> return @Tokens.length
 
-    ContainsTokenTypes: (selectors) ->
+
+    ContainsSelectors: (selectors) ->
         return false unless selectors? && !IsEmpty()
         selectors = [ selectors ] if type(selectors) is 'string'
 
@@ -47,6 +52,31 @@ module.exports = class CodeLine
 
         return true if allSelectorsFound
         return false
+
+
+
+    FindSelector: (selector) ->
+        for token, idx in @Tokens
+            return idx if token.IsSelector(Selector)
+        return -1
+
+    FindSelectors: (selectors) ->
+        idx = 0
+        results = [ ]
+        for a in [ 0 .. @Tokens.length ]
+            if @Tokens[a].IsSelector(selectors[idx])
+                results.push(a)
+                idx++
+            break if idx == selectors.length
+
+        return results
+
+    Find: (selector) ->
+        for a in [ 0 .. @Tokens.length ]
+            return a if @Tokens[a].IsSelector(selector)
+        return -1
+
+
 
 
     # ISEMPTY - Determines whether this code line contains any meaningful tokens.
@@ -61,13 +91,7 @@ module.exports = class CodeLine
     IsEmpty: ->
         return true unless @Tokens.length
         for token in @Tokens
-            isSpace =
-                token.IsSelector("@Indent")         ||
-                token.IsSelector("@Outdent")        ||
-                token.IsSelector("WhiteSpace")      ||
-                token.IsSelector("Comment")
-            return false unless isSpace
-            # return false unless token.Type in [ "@Indent", "@Outdent", "NewLine", "WhiteSpace" ]
+            return false if token.IsEmpty()
         return true
 
     ToString: ->

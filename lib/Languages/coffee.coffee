@@ -5,6 +5,9 @@
 
 module.exports =
 
+    FileExtension:              '.coffee'
+
+
     IsPythonic:         true
     IsStaticallyTyped:  false
 
@@ -13,19 +16,13 @@ module.exports =
         Enclosure:
             Close:
                 Block:          [ "}", "@Outdent" ]
-                # Comment:        "###"
+                Comment:        "###"
                 Character:      ""
-                Comment:
-                    Block:      "###"
-                    # Inline:     "\n"
                 String:         [ '\'', "\"" ]
             Open:
                 Block:          [ "{", "@Indent" ]
-                # Comment:        "###"
+                Comment:        "###"
                 Character:      ""
-                Comment:
-                    Block:      "###"
-                    # Inline:     "#"
                 String:         [ '\'', "\"" ]
 
         Operator:
@@ -73,24 +70,6 @@ module.exports =
 
 
 
-    Declarations:
-        Class:      /class\s+@Name/
-        Function:   /@Name\s*\=\s*(?:\(@Arguments\))?\s*[\-\=]\>/
-        Method:     /@Name\s*\:\s*(?:\(@Arguments\))?\s*[\-\=]\>/
-
-
-
-    # Structures:
-    #
-    #     Class:
-    #         Declaration:
-    #             /class\s+(\w+)/
-    #
-    #         Definition:
-    #
-    #         Member:
-    #         Method:
-
 
     SpecialDefinitions:
         Arguments:      null
@@ -100,32 +79,3 @@ module.exports =
         Outdent:        null
         Type:           null
         Word:           null
-
-
-
-
-
-    Function:
-
-        Declaration:
-            Signature:
-                [
-                    "@Word : ( @Arguments ) ->"
-                    "@Word : ( @Arguments ) =>"
-                    "@Word : ->"
-                    "@Word : =>"
-                ]
-
-        Definition: null
-
-        Invokation:
-            Signature:
-                [
-                    "@Word ( @Arguments )",
-                    "@Word @Arguments \n"
-                ]
-
-
-    Symbol:
-        Name:       ""
-        Signature:  ""

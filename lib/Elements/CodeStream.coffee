@@ -25,9 +25,16 @@ exports.Token = class Token
         return false unless type(selector) is 'string'
         selectors = selector.split('.')
         for s in selectors
-            return false unless @Type.Contains(s)    
+            return false unless @Type.Contains(s)
         return true
 
+    IsComment: -> return @IsSelector("Comment")
+
+    IsEmpty: -> return @IsSpecial() || @IsSelector("WhiteSpace") || @IsSelector("Comment")
+
+    IsSpecial: -> return (_Buffer[0] in ["@Indent", "@Outdent"])
+
+    IsWhiteSpace: -> return @IsSelector("WhiteSpace")
 
     # LENGTH - Gets the number of individual characters present in this token.
     Length:         -> return @_Buffer.length
@@ -71,8 +78,8 @@ exports.CodeStream = class CodeStream
         return @_BlockStack[@_BlockStack.length - 1]
     # _ISCLOSEFORCURRENTBLOCK - Determines if a symbol marks the close of a previously opened block.
     _IsCloseForCurrentBlock: (symbol) ->
-        return false unless @_CurrentBlock()?.Close?
-        return true if symbol is @_CurrentBlock().Close
+        return false unless @_CurrentBlock()?._Close?
+        return true if symbol is @_CurrentBlock()._Close
         return false
     # _ISNEXTSYMBOL - Determines whether the next symbol in the text stream would match the inputted symbol.
     _IsNextSymbol: (symbol) =>
@@ -122,8 +129,8 @@ exports.CodeStream = class CodeStream
 
     # _PROCESSCONTENT - Continues processing the content of a block.
     _ProcessContent: ->
-        @_CurrentToken.Type = @_CurrentBlock().Content
-        @_ProcessUntil(@_CurrentBlock().Close)
+        @_CurrentToken.Type = @_CurrentBlock()._Content
+        @_ProcessUntil(@_CurrentBlock()._Close)
 
     # _PROCESSENCLOSURE - Pushes and pops the current block scope that's being processed.
     _ProcessEnclosure: ->
@@ -166,7 +173,7 @@ exports.CodeStream = class CodeStream
         switch
             when !@_CurrentToken.Type?                      then @_CurrentToken.Type = "Unknown"
             when @_Lexicon.IsEnclosure(ctTokenValue)        then @_ProcessEnclosure()
-            when @_CurrentToken.Type.Contains("Comment")    then @_ProcessComment()
+            when @_CurrentToken.IsComment()                 then @_ProcessComment()
 
         return undefined
 
@@ -220,8 +227,8 @@ exports.CodeStream = class CodeStream
     #
     #   This test is useful when tokenizing code whose logic spans multiple lines in the source file.
     _ResumeProcessing: ->
-        return false unless @_CurrentBlock()?.Content?
-        return false if @_IsNextSymbol(@_CurrentBlock().Close)
+        return false unless @_CurrentBlock()?._Content?
+        return false if @_IsNextSymbol(@_CurrentBlock()._Close)
         return true
 
 
@@ -255,7 +262,7 @@ exports.CodeStream = class CodeStream
     #       token = @ReadToken()
     #
     #   OUTPUTS:
-    #       token:      Token
+    #       token:      TOKEN
     #
     ReadToken: ->
 
@@ -265,10 +272,6 @@ exports.CodeStream = class CodeStream
         @_CurrentToken = new Token()
 
         switch
-
-            # when char is '\n'
-            #     @_CurrentToken.Add(@_ReadCharacter())
-            #     @_CurrentToken.Type = "NewLine"
 
             when @_ResumeProcessing()                 then @_ProcessContent()
             when @_Lexicon.IsWhiteSpace(char)         then @_ProcessWhiteSpace()

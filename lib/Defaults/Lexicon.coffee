@@ -23,10 +23,13 @@ module.exports =
     Blocks:                             require('./Blocks')
     Literals:                           require('./Literals')
     Symbols:                            require('./Symbols')
+    Types:                              require('./Types')
     Words:                              require('./Words')
 
 
+    # DEFAULTTAG - The default HTML tag that will be applied to any unrecognized token.
     DefaultTag:                         "Variable"
+    # FILEEXTENSION - The type of file for which this lexicon should be referenced.
     FileExtension:                      [ ".*" ]
 
 
@@ -63,22 +66,26 @@ module.exports =
     IsKeyword: (word)               -> return contains(@Words.Keyword, word)
     # ISNUMBER - Determines whether a character is a number.
     IsNumber: (char)                -> return contains(@Words.Word.Number, char)
+    # ISOPENENCLOSURE - Determines whether a character is the opening part of an enclosure pair.
     IsOpenEnclosure: (char)         -> return contains(@Symbols.Enclosure.Open, char)
+    # ISOPENWORDCHARACTER - Determines whether a character could be the start of a word token.
     IsOpenWordCharacter: (char)     -> return contains(@Words.Word.Open, char)
+    # ISOPERATOR - Determines whether a character is an operator symbol.
     IsOperator: (char)              -> return contains(@Symbols.Operator, char)
+
     IsSymbolic: (char)              -> return contains(@Symbols, char)
+    # ISWHITESPACE - Determines whether a character represents an inline white space.
     IsWhiteSpace: (char)            -> return contains(@Words.WhiteSpace, char)
+    # ISWORDCHARACTER - Determines whether a character could be a part of a word token.
     IsWordCharacter: (char)         -> return contains(@Words.Word, char)
 
     # IsNumeric:              (char) ->
     #     return true if @IsNumber(char)
     #     return true if
 
-    IsEnclosureMatched:     (open, close) ->
-        openTag = find(@Symbols.Enclosure.Open, open)
-        return false if !openTag?
-        closeTag = find(@Symbols.Enclosure.Close, close)
-        return false if !closeTag?
+    IsEnclosureMatched: (open, close) ->
+        return false unless openTag = find(@Symbols.Enclosure.Open, open)
+        return false unless closeTag = find(@Symbols.Enclosure.Close, close)
         return true if openTag is closeTag
         return false
 
@@ -97,6 +104,9 @@ module.exports =
         sym ?= @ResolveOperator(char)
         return sym
 
+    ResolveWhiteSpace: (char) ->
+        return "Words.WhiteSpace." + find(@Words.WhiteSpace, char)
+
     ResolveWord: (word) ->
         word = find(@Words, word)
         word ?= @DefaultTag
@@ -114,7 +124,7 @@ module.exports =
                 block = v
                 break
 
-        return null if !block?
+        return null unless block?
 
         newBlock = clone(block)
 
@@ -127,32 +137,4 @@ module.exports =
                 newBlock.Open = newBlock.Open[idxSym]
                 newBlock.Close = newBlock.Close[idxSym]
 
-        # return clone(block)
         return newBlock
-
-
-
-
-
-
-
-    # Signature:
-    #     Close:          null
-    #     Contents:       null
-    #     Open:           null
-    #     Prefix:         null
-    #     Suffix:         null
-
-
-
-
-    ## PREDEFINED LANGUAGE ELEMENTS ##
-
-    # Rule:
-    #     Contains:
-    #     CannotContain:
-    #     CannotFollow:
-    #     CannotPrecede:
-    #     Follows:
-    #     Name:
-    #     Precedes:

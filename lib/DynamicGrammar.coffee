@@ -1,23 +1,23 @@
 # CHANGELOG
 # Written by Josh Grooms on 20151224
 
-CodeFile                = require('./Elements/CodeFile')
-{ CodeStream, Token }   = require('./Elements/CodeStream')
-{ clone, overload }               = require('./Utilities/ObjectFunctions')
-{ Grammar }             = require('first-mate')
-{ CompositeDisposable}  = require('atom')
-fs                      = require('fs')
+CodeBlock                   = require('./Elements/CodeBlock')
+CodeFile                    = require('./Elements/CodeFile')
+{ CodeStream, Token }       = require('./Elements/CodeStream')
+{ clone, overload, type}    = require('./Utilities/ObjectFunctions')
+
+{ Grammar }                 = require('first-mate')
+{ CompositeDisposable}      = require('atom')
+fs                          = require('fs')
 
 
 module.exports = class DynamicGrammar extends Grammar
 
-    _CodeFiles:         [ ]
+    _CodeFiles:         { }
     _DefaultLexicon:    null
-    _Lexicons:          [ ]
+    _Lexicons:          { }
     _WorkingFile:       null
     _WorkingEditor:     null
-
-    # _CodeFile:          null
     _Program:           null
     _Subscriptions:     null
 
@@ -25,9 +25,9 @@ module.exports = class DynamicGrammar extends Grammar
 
     ## CONSTRUCTOR & DESTRUCTOR ##
     constructor: (@_Program) ->
-        @_CodeFiles     = [ ]
+        @_CodeFiles     = { }
         @_Subscriptions = new CompositeDisposable
-        @_Lexicons      = [ ]
+        @_Lexicons      = { }
 
         @_LoadLexicons()
         @_UpdateCodeFile()
@@ -59,9 +59,24 @@ module.exports = class DynamicGrammar extends Grammar
         for file in lexFiles
             ctLex = clone(@_DefaultLexicon)
             overload( ctLex, require("./Languages/" + file) )
+            @_PreprocessLexicon(ctLex)
             @_Lexicons[file.split('.')[0]] = ctLex
 
-        return undefined
+        @_PreprocessLexicon(@_DefaultLexicon)
+
+
+    _PreprocessLexicon: (lexicon) ->
+        for k, v of lexicon.Types
+            if type(v) is 'object'
+                v._Tag = "Types." + k unless v._Tag?
+                lexicon.Types[k] = new CodeBlock(v)
+
+        return lexicon
+
+
+
+
+
     # _UPDATECODEFILE - Updates the working code file object for this grammar whenever the active pane item changes.
     #
     #   This method is executed whenever a user navigates to another tab within the Atom editor.
@@ -78,6 +93,7 @@ module.exports = class DynamicGrammar extends Grammar
 
             @_CodeFiles[@_WorkingEditor.id] = new CodeFile(@_WorkingEditor, lex)
             @_WorkingFile = @_CodeFiles[@_WorkingEditor.id]
+
 
 
     ## ATOM API METHODS ##
@@ -126,7 +142,7 @@ module.exports = class DynamicGrammar extends Grammar
         codeLine = @_WorkingFile.RetokenizeLine(line, firstLine)
 
         for token in codeLine.Tokens
-            continue if token.Type.Contains("@")
+            continue if token.IsSpecial()
             tag = token.Type.replace(' ', '.').toLowerCase()
             tags.push(@_StartID(tag))
             tags.push(token.Length())

@@ -1,13 +1,14 @@
 # CHANGELOG
 # Written by Josh Grooms on 20151218
 
-{ clone }               = require('../Utilities/ObjectFunctions')
-Blocks                  = require('../Defaults/Blocks')
 CodeBlock               = require('./CodeBlock')
 CodeLine                = require('./CodeLine')
+CodeSignature           = require('./Signature')
+{ clone }               = require('../Utilities/ObjectFunctions')
 { CompositeDisposable } = require('atom')
 { CodeStream, Token }   = require('./CodeStream')
 { Lexicon, Symbols }    = require('../Defaults')
+
 
 
 
@@ -24,42 +25,36 @@ module.exports = class CodeFile
     _AtomTokenBuffer:   null
     _Block:             null
     _Editor:            null
-    # _EXTENSION - A string containing the extension part of this file's name.
-    _Extension:         null
     _FileStream:        null
     _Lexicon:           null
     # _LINES - The internal code line buffer for the file.
     _Lines:             [ ]
     # _LINESTREAM - A token stream meant for reprocessing single lines of source code text.
     _LineStream:        null
-    _Name:              null
     _SweepActive:       false
     # _WORKINGLINE - The source code line number that is currently being processed.
     _WorkingLine:       0
     # _SUBSCRIPTIONS - A collection of disposable event registrations.
     _Subscriptions:     null
-
+    _Tokens:            [ ]
+    _Types:             [ ]
 
 
     ## CONSTRUCTOR & DESTRUCTOR ##
-    constructor: (@_Program) ->
-        @_Editor            = @_Program.Editor
-        @_Name              = @_Editor.ActiveEditor.getPath()
-
-        @_AtomTokenBuffer   = @_Editor.ActiveEditor.displayBuffer.tokenizedBuffer
-        @_Extension         = @_Name[ @_Name.lastIndexOf('.') + 1 .. @_Name.length - 1 ]
-        @_Lexicon           = @_Program.RequestLexicon(@_Extension)
+    constructor: (@_Editor, @_Lexicon) ->
         @_Lines             = [ ]
+        @_Tokens            = [ ]
+        @_Types             = [ ]
         @_Subscriptions     = new CompositeDisposable()
 
-        @_Block             = new CodeBlock(@_Lexicon.Blocks.File)
-        @_FileStream        = new CodeStream(@_Editor.GetText(), @_Lexicon)
+        @_AtomTokenBuffer   = @_Editor.displayBuffer.tokenizedBuffer
+        @_FileStream        = new CodeStream(@_Editor.getText(), @_Lexicon)
         @_LineStream        = new CodeStream('', @_Lexicon)
 
         @_ProcessFile()
 
-        # @_Subscriptions.add( @_Editor.ActiveEditor.onDidStopChanging(@ReprocessFile) )
-        @_Subscriptions.add( @_Editor.ActiveEditor.getBuffer().onWillChange(@_HandleTextChange) )
+        @_Subscriptions.add( @_Editor.onDidStopChanging(@ReprocessFile) )
+        @_Subscriptions.add( @_Editor.getBuffer().onWillChange(@_HandleTextChange) )
 
     destroy: ->
         @_Subscriptions.dispose()
@@ -67,10 +62,12 @@ module.exports = class CodeFile
 
 
     ## PRIVATE UTILITIES ##
+
     # _DELETELINES - Removes one or more lines from the file's code line buffer.
     _DeleteLines: (start, n = 1) ->
         @_Lines.splice(start, n)
         return undefined
+
     # _HANDLETEXTCHANGE - Monitors the Atom text buffer for changes and modifies the file's code line buffer accordingly.
     #
     #   This method is a callback function that is invoked before text is actually changed within Atom's text buffers.
@@ -95,7 +92,6 @@ module.exports = class CodeFile
     #                           column  -
     #                           row     -
     #                   oldText         -
-
     _HandleTextChange: (evt) =>
         @_WorkingLine = evt.newRange.start.row
         newLineRange = evt.newRange.end.row - evt.newRange.start.row
@@ -108,64 +104,252 @@ module.exports = class CodeFile
         else
             @_DeleteLines(evt.oldRange.end.row, oldLineRange - newLineRange)
 
+    # _INDENTLEVEL - Retrieves the indentation level for a specific line of source code text.
+    _IndentLevel: (lineNum) ->
+        return 0 if lineNum < 0
+        return @_Lines[lineNum].IndentLevel unless @_Lines[lineNum].IsEmpty()
+        return @_IndentLevel(lineNum - 1)
+
     # _INSERTLINE - Inserts a single line into the file's code line buffer.
     _InsertLine: (lineNum, line = null) ->
         line ?= new CodeLine()
         @_Lines.splice(lineNum, 0, line)
         return undefined
+
     # _INSERTLINES - Inserts one or more lines into the file's code line buffer.
     _InsertLines: (start, n) ->
         @_InsertLine(start++) while n--
         return undefined
-    # _OPENBLOCKS - Generates a copy of the block stack left open at the end of the previous code line.
+
+    # _OPENBLOCKS - Generates a copy of the open block stack at the beginning of a code line.
     _OpenBlocks: (lineNum) ->
         return null if lineNum == 0
         lineNum = min(@_Lines.length - 1, lineNum)
         return clone(@_Lines[lineNum - 1].BlockStack)
 
-    _ProcessFile: =>
-        ctLine = new CodeLine()
-        while ( !@_FileStream.EOS() )
-            ctLine.Add(@_FileStream.ReadToken())
+
+    _SplitLine: (line, idx) ->
+        first = clone(line)
+        first.Tokens = line.Tokens.slice(0, idx)
+        second = clone(line)
+        second.Tokens = line.Tokens.slice(idx + 1)
+
+        return [first, second]
+
+
+
+    _ProcessLine: (line, blocks) ->
+        blocks ?= @_Lexicon.Types
+
+        idxBlockOpen = line.FindSelector("Enclosure.Open.Block")
+        if idxBlockOpen != -1
+            [ first, second ] = @_SplitLine(line)
+
+            if !first.IsEmpty()
+
+
+        for token in line.Tokens
+            switch
+                when token.IsSelector("Enclosure.Open.Block")
+
+                when token.IsSelector("Enclosure.Close.Block")
+
+
+
+
+    _ProcessBlock: (lineNum, idxOpen) ->
+
+        line = @_Lines[lineNum]
+
+        ltMatch = null
+        ltStrength = 0
+        ltBlock = null
+
+        # Test this
+        [ first, second ] = @_SplitLine(line, b)
+
+        firstEmpty = first.IsEmpty()
+        secondEmpty = second.IsEmpty()
+        # break if firstEmpty && secondEmpty
+
+        lineQueue.push(second) unless secondEmpty
+        # if (firstEmpty && secondEmpty) then inlineBlock = false
+        # else inlineBlock = true
+
+        unless firstEmpty
+            for k, v of @_Lexicon.Types
+
+                if token.IsSelector(v._Open)
+                    testLine = if inlineBlock then line else @_Lines[a - 1]
+                    [match, strength] = v.MatchPrefix(testLine)
+
+                    if match? && (strength > ltStrength)
+                        ltBlock = v
+                        ltMatch = match
+                        ltStrength = strength
+
+            if ltBlock? && ltMatch?
+                for idx, name of ltMatch
+                    testLine[idx].Type = name
+
+            blockStack.push(ltBlock) if ltBlock?
+            contentStack.push(ltBlock._Content) if ltBlock?._Content?
+
+
+
+
+
+    _ProcessBlocks: ->
+        blockStack = [ ]
+        contentStack = [ ]
+        content = @_Lexicon.Types
+
+        idxLine = 0
+        lineQueue = [ ]
+        while idxLine < @_Lines.length
+            line = if lineQueue.length then lineQueue.pop() else @_Lines[idxLine++]
+
+            continue if line.IsEmpty()
+
+            idxBlockOpen = line.FindSelector("Enclosure.Open.Block")
+            if idx != -1
+
+
+                # Test this
+                [ first, second ] = @_SplitLine(line, idxBlockOpen)
+
+                firstEmpty = first.IsEmpty()
+                secondEmpty = second.IsEmpty()
+                # break if firstEmpty && secondEmpty
+
+
+                lineQueue.push(second) unless secondEmpty
+                # if (firstEmpty && secondEmpty) then inlineBlock = false
+                # else inlineBlock = true
+
+                if firstEmpty
+                    prefixLine = @_Lines[idxLine]
+
+
+                ltMatch = null
+                ltStrength = 0
+                ltBlock = null
+                unless firstEmpty
+                    for k, v of @_Lexicon.Types
+
+                        if token.IsSelector(v._Open)
+                            # testLine = if inlineBlock then line else @_Lines[a - 1]
+                            [match, strength] = v.MatchPrefix(first)
+
+                            if match? && (strength > ltStrength)
+                                ltBlock = v
+                                ltMatch = match
+                                ltStrength = strength
+
+                                if ltBlock? && ltMatch?
+                                    for idx, name of ltMatch
+                                        first[idx].Type = name
+
+                                        blockStack.push(ltBlock) if ltBlock?
+                                        contentStack.push(ltBlock._Content) if ltBlock?._Content?
+
+                                        unless secondEmpty
+
+
+
+
+
+
+            for token, b in line.Tokens
+                switch
+                    when token.IsSelector("Enclosure.Open.Block")
+
+
+
+
+
+
+
+        for line, a in @_Lines
+            continue if line.IsEmpty()
+
+            lineQueue = [ ]
+
+            inlineBlock = false
+
+
+                    when token.IsSelector("Enclosure.Close.Block")
+                        continue unless blockStack.length
+
+                        ctBlock = blockStack[blockStack.length - 1]
+                        if token.IsSelector(ctBlock._Close)
+                            blockStack.pop()
+                            contentStack.pop() if ctBlock._Content?
+
+                            # Suffix processing
+
+                    else
+                        inlineBlock = true unless token.IsEmpty()
+
+                        if contentStack.length
+                            content = contentStack[contentStack.length - 1]
+                        else
+                            content = @_Lexicon.Types
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    _ProcessFile: ->
+        idxLine = 0
+        ctLine = @_ResetLine(idxLine++)
+
+        while ( ctToken = @_FileStream.ReadToken() )
+            @_Tokens.push(ctToken)
+            ctLine.Add(ctToken)
             if ctLine.IsClosed
                 ctLine.BlockStack = @_FileStream.OpenBlocks()
-                @_Lines.push(ctLine)
-                ctLine = new CodeLine()
-
-
+                ctLine = @_ResetLine(idxLine++)
 
     _ReprocessLine: (text, lineNum) ->
         @_LineStream.Reset(text, @_OpenBlocks(lineNum))
-
-        line = new CodeLine()
+        line = @_ResetLine(lineNum)
         line.Add(@_LineStream.ReadToken()) while ( !@_LineStream.EOS() )
         line.BlockStack = @_LineStream.OpenBlocks()
-        @_Lines[lineNum] = line
-
         return line
 
+    _ResetLine: (lineNum) ->
+        line = @_Lines[lineNum] = new CodeLine()
 
-    _ReprocessLines: (start, end) ->
-        end ?= @_AtomTokenBuffer.getLastRow()
+        if @_Lexicon.IsPythonic
+            ctIndent = line.IndentLevel = @_Editor.indentationForBufferRow(lineNum)
+            ltIndent = @_IndentLevel(lineNum - 1)
 
-        text = @_Editor.GetLines(start, end)
-        @_LineStream.Reset(text, @_OpenBlocks(start))
+            if ctIndent > ltIndent
+                for a in [ 0 .. ctIndent - ltIndent - 1 ]
+                    line.Add(new Token("@Indent", "Symbols.Enclosure.Open.Block"))
+            if ctIndent < ltIndent
+                for a in [ 0 .. ltIndent - ctIndent - 1 ]
+                    line.Add(new Token("@Outdent", "Symbols.Enclosure.Close.Block"))
 
-        idxLine = start
-        ctLine = new CodeLine()
-        while ( !@_LineStream.EOS() )
-            ctLine.Add(@_LineStream.ReadToken())
-            if ctLine.IsClosed
-                ctLine.BlockStack = @_FileStream.OpenBlocks()
-                @_Lines[idxLine++] = ctLine
-                ctLine = new CodeLine()
-
-        return undefined
+        return line
 
 
 
 
     ## PUBLIC UTILITIES ##
+
     # LINECOUNT - Gets the number of individual lines that are present in this code file.
     #
     #   SYNTAX:
@@ -176,11 +360,13 @@ module.exports = class CodeFile
     #               The total number of source code lines that are present in this file. This output reflects a count of the
     #               number of newline characters (i.e. '\n') that are present in the source text.
     LineCount: -> return @_Lines.length
+
     # REPROCESSFILE - Deletes all stored data and completely reprocesses all text inside the file.
     ReprocessFile: =>
-        @_FileStream.Reset(@_Editor.GetText())
-        @_Lines = [ ]
-        @_Name = @_Editor.ActiveEditor.getPath()
+        @_FileStream.Reset(@_Editor.getText())
+        @_Lines     = [ ]
+        @_Tokens    = [ ]
+        @_Types     = [ ]
 
         @_ProcessFile()
 
@@ -188,11 +374,8 @@ module.exports = class CodeFile
         # @_Editor.ActiveEditor.displayBuffer.tokenizedBuffer.reloadGrammar()
         # @_Editor.ActiveEditor.displayBuffer.updateAllScreenLines()
 
-
-
-
-    RetokenizeLine: (text, firstLine) ->
-        if firstLine
+    RetokenizeLine: (text, isFirstLine) ->
+        if isFirstLine
             # Then a sweep is for sure happening
             @_SweepActive = true
             @_WorkingLine = 0
@@ -200,7 +383,10 @@ module.exports = class CodeFile
         if @_SweepActive
             if @_WorkingLine >= @LineCount()
                 @_SweepActive = false
+                return @_Lines[@_Lines.length - 1]
             else
                 return @_Lines[@_WorkingLine++]
+
+
 
         return @_ReprocessLine(text, @_WorkingLine++)

@@ -6,8 +6,8 @@ require('../Utilities/ArrayExtensions')
 
 
 
+# CODELINE - A class that stores and maintains a single line of tokenized source code text.
 module.exports = class CodeLine
-
 
     BlockStack:     [ ]
     IndentLevel:    0
@@ -31,11 +31,9 @@ module.exports = class CodeLine
     ## PUBLIC UTILITIES ##
     # ADD - Appends a new token to the code line.
     Add: (token) ->
-        return false if @IsClosed
         @Tokens.Merge(token)
-        @IsClosed = true if token.IsSelector("NewLine")
+        @IsClosed = true if token.IsSelector("Operator.LineTerminator")
         return true
-
 
     # COUNT - Returns the number of tokens present in this code line.
     Count: -> return @Tokens.length
@@ -53,13 +51,13 @@ module.exports = class CodeLine
         return true if allSelectorsFound
         return false
 
-
-
+    # FINDSELECTOR - Determines the index of the first token whose type matches the inputted selector.
     FindSelector: (selector) ->
         for token, idx in @Tokens
             return idx if token.IsSelector(Selector)
         return -1
 
+    # FINDSELECTORS - Determines the indices of
     FindSelectors: (selectors) ->
         idx = 0
         results = [ ]
@@ -70,14 +68,21 @@ module.exports = class CodeLine
             break if idx == selectors.length
 
         return results
+    # GETMEANINGFULTOKEN - Finds a non-whitespace token relative to a starting position.
+    GetMeaningfulToken: (start, offset) ->
+        offset = 1 unless offset
+        if offset < 0
+            idxToken = start
+            while offset && idxToken > 0
+                offset++ unless @Tokens[--idxToken].IsEmpty()
 
-    Find: (selector) ->
-        for a in [ 0 .. @Tokens.length ]
-            return a if @Tokens[a].IsSelector(selector)
-        return -1
+        if offset > 0
+            idxToken = start
+            while offset && idxToken < @Count() - 1
+                offset-- unless @Tokens[++idxToken].IsEmpty()
 
-
-
+        return [ null, null ] if offset
+        return [ idxToken, @Tokens[idxToken] ]
 
     # ISEMPTY - Determines whether this code line contains any meaningful tokens.
     #
@@ -94,6 +99,7 @@ module.exports = class CodeLine
             return false if token.IsEmpty()
         return true
 
+    # TOSTRING - Converts this line of tokens into a string containing the original source code
     ToString: ->
         line = ""
         line += token.Value() for token in @Tokens

@@ -64,7 +64,7 @@ module.exports = class DynamicGrammar extends Grammar
 
         @_PreprocessLexicon(@_DefaultLexicon)
 
-
+    # _PREPROCESSLEXICON - Performs any necessary preprocessing of a Lexicon before it is used.
     _PreprocessLexicon: (lexicon) ->
         for k, v of lexicon.Types
             if type(v) is 'object'
@@ -72,10 +72,6 @@ module.exports = class DynamicGrammar extends Grammar
                 lexicon.Types[k] = new CodeBlock(v)
 
         return lexicon
-
-
-
-
 
     # _UPDATECODEFILE - Updates the working code file object for this grammar whenever the active pane item changes.
     #

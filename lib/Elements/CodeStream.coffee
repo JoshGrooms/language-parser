@@ -17,10 +17,12 @@ exports.Token = class Token
         @Type      = type
 
     # ADD - Appends one or more characters to the end of the current token value.
-    Add: (char)     ->
+    Add: (char) ->
         @_Buffer.Merge(char)
         return undefined
 
+
+    # ISSELECTOR - Determines whether this token's type matches the inputted selector.
     IsSelector: (selector) ->
         return false unless type(selector) is 'string'
         selectors = selector.split('.')
@@ -28,13 +30,16 @@ exports.Token = class Token
             return false unless @Type.Contains(s)
         return true
 
-    IsComment: -> return @IsSelector("Comment")
 
-    IsEmpty: -> return @IsSpecial() || @IsSelector("WhiteSpace") || @IsSelector("Comment")
+    # ISCOMMENT - Determines whether this token represents a comment within the original source code.
+    IsComment:      -> return @IsSelector("Comment")
+    # ISEMPTY - Determines whether this token contains any meaningful source code.
+    IsEmpty:        -> return @IsSpecial() || @IsSelector("WhiteSpace") || @IsSelector("Comment")
+    # ISSPECIAL - Determines whether this token represents a special symbol introduced by the language parser.
+    IsSpecial:      -> return (@_Buffer[0] in ["@Indent", "@Outdent"])
+    # ISWHITESPACE - Determines whether this token represents empty space within the original source code.
+    IsWhiteSpace:   -> return @IsSelector("WhiteSpace")
 
-    IsSpecial: -> return (_Buffer[0] in ["@Indent", "@Outdent"])
-
-    IsWhiteSpace: -> return @IsSelector("WhiteSpace")
 
     # LENGTH - Gets the number of individual characters present in this token.
     Length:         -> return @_Buffer.length
@@ -42,6 +47,7 @@ exports.Token = class Token
     Remove: (n = 1) ->
         @_Buffer[@Length() - n .. @Length() - 1] = [ ]
         return undefined
+
     Value:          -> return @_Buffer.join('')
 
 
@@ -121,7 +127,6 @@ exports.CodeStream = class CodeStream
 
 
     ## PRIVATE TOKENIZING METHODS ##
-
     # _PROCESSCOMMENT - Creates an inline comment token.
     _ProcessComment: ->
         @_CurrentToken.Type = "Comment"
@@ -285,7 +290,7 @@ exports.CodeStream = class CodeStream
 
 
     Reset: (@_Text, @_BlockStack) ->
-        @_BlockStack    = [ ] if !@_BlockStack?
+        @_BlockStack    = [ ] unless @_BlockStack?
         @_CurrentToken  = null
         @_Index         = 0
         @_Text          = @_Text.replace(/\r/gm, '')

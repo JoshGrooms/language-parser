@@ -41,6 +41,7 @@ module.exports =
 
     IsEvaluationLazy:                   false
     IsFunctional:                       true
+    IsLineTerminatorRequired:           true
     IsMultiLineSupported:               true
     IsObjectOriented:                   true
     IsOperatorOverloadingSupported:     true

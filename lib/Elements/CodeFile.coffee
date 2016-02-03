@@ -3,7 +3,8 @@
 
 CodeBlock               = require('./CodeBlock')
 CodeLine                = require('./CodeLine')
-CodeSignature           = require('./Signature')
+# CodeSignature           = require('./Signature')
+CodeSignature           = require('./CodeSignature')
 { clone }               = require('../Utilities/ObjectFunctions')
 { CompositeDisposable } = require('atom')
 { CodeStream, Token }   = require('./CodeStream')
@@ -40,12 +41,16 @@ module.exports = class CodeFile
     _Types:             [ ]
 
 
+    _ScopeStack:        [ ]
+
+
     ## CONSTRUCTOR & DESTRUCTOR ##
     constructor: (@_Editor, @_Lexicon) ->
         @_Lines             = [ ]
+        @_ScopeStack        = [ @_Lexicon.Types ]
+        @_Subscriptions     = new CompositeDisposable()
         @_Tokens            = [ ]
         @_Types             = [ ]
-        @_Subscriptions     = new CompositeDisposable()
 
         @_AtomTokenBuffer   = @_Editor.displayBuffer.tokenizedBuffer
         @_FileStream        = new CodeStream(@_Editor.getText(), @_Lexicon)
@@ -55,6 +60,7 @@ module.exports = class CodeFile
 
         @_Subscriptions.add( @_Editor.onDidStopChanging(@ReprocessFile) )
         @_Subscriptions.add( @_Editor.getBuffer().onWillChange(@_HandleTextChange) )
+
 
     destroy: ->
         @_Subscriptions.dispose()
@@ -128,199 +134,83 @@ module.exports = class CodeFile
         return clone(@_Lines[lineNum - 1].BlockStack)
 
 
-    _SplitLine: (line, idx) ->
-        first = clone(line)
-        first.Tokens = line.Tokens.slice(0, idx)
-        second = clone(line)
-        second.Tokens = line.Tokens.slice(idx + 1)
-
-        return [first, second]
 
 
+    _ResolveLine: (line, matches = null) ->
 
-    _ProcessLine: (line, blocks) ->
-        blocks ?= @_Lexicon.Types
+        ctScope = @_ScopeStack[@_ScopeStack.length - 1]
+        matches ?= [ ]
 
-        idxBlockOpen = line.FindSelector("Enclosure.Open.Block")
-        if idxBlockOpen != -1
-            [ first, second ] = @_SplitLine(line)
+        scopeNames = Object.keys(ctScope)
+        for scopeName, a in scopeNames
 
-            if !first.IsEmpty()
+            if matches[a]?.IsComplete || !(matches[a]?.IsMatched)
+                ctScope[scopeName].Reset()
 
-
-        for token in line.Tokens
             switch
-                when token.IsSelector("Enclosure.Open.Block")
+                when ctScope[scopeName] instanceof CodeBlock
+                    matches[a] = ctScope[scopeName].MatchPrefix(line)
 
-                when token.IsSelector("Enclosure.Close.Block")
+                when ctScope[scopeName] instanceof CodeSignature
+                    match[a] = ctScope[scopeName].Match(line)
 
-
-
-
-    _ProcessBlock: (lineNum, idxOpen) ->
-
-        line = @_Lines[lineNum]
-
-        ltMatch = null
-        ltStrength = 0
-        ltBlock = null
-
-        # Test this
-        [ first, second ] = @_SplitLine(line, b)
-
-        firstEmpty = first.IsEmpty()
-        secondEmpty = second.IsEmpty()
-        # break if firstEmpty && secondEmpty
-
-        lineQueue.push(second) unless secondEmpty
-        # if (firstEmpty && secondEmpty) then inlineBlock = false
-        # else inlineBlock = true
-
-        unless firstEmpty
-            for k, v of @_Lexicon.Types
-
-                if token.IsSelector(v._Open)
-                    testLine = if inlineBlock then line else @_Lines[a - 1]
-                    [match, strength] = v.MatchPrefix(testLine)
-
-                    if match? && (strength > ltStrength)
-                        ltBlock = v
-                        ltMatch = match
-                        ltStrength = strength
-
-            if ltBlock? && ltMatch?
-                for idx, name of ltMatch
-                    testLine[idx].Type = name
-
-            blockStack.push(ltBlock) if ltBlock?
-            contentStack.push(ltBlock._Content) if ltBlock?._Content?
-
-
-
-
-
-    _ProcessBlocks: ->
-        blockStack = [ ]
-        contentStack = [ ]
-        content = @_Lexicon.Types
-
-        idxLine = 0
-        lineQueue = [ ]
-        while idxLine < @_Lines.length
-            line = if lineQueue.length then lineQueue.pop() else @_Lines[idxLine++]
-
-            continue if line.IsEmpty()
-
-            idxBlockOpen = line.FindSelector("Enclosure.Open.Block")
-            if idx != -1
-
-
-                # Test this
-                [ first, second ] = @_SplitLine(line, idxBlockOpen)
-
-                firstEmpty = first.IsEmpty()
-                secondEmpty = second.IsEmpty()
-                # break if firstEmpty && secondEmpty
-
-
-                lineQueue.push(second) unless secondEmpty
-                # if (firstEmpty && secondEmpty) then inlineBlock = false
-                # else inlineBlock = true
-
-                if firstEmpty
-                    prefixLine = @_Lines[idxLine]
-
-
-                ltMatch = null
-                ltStrength = 0
-                ltBlock = null
-                unless firstEmpty
-                    for k, v of @_Lexicon.Types
-
-                        if token.IsSelector(v._Open)
-                            # testLine = if inlineBlock then line else @_Lines[a - 1]
-                            [match, strength] = v.MatchPrefix(first)
-
-                            if match? && (strength > ltStrength)
-                                ltBlock = v
-                                ltMatch = match
-                                ltStrength = strength
-
-                                if ltBlock? && ltMatch?
-                                    for idx, name of ltMatch
-                                        first[idx].Type = name
-
-                                        blockStack.push(ltBlock) if ltBlock?
-                                        contentStack.push(ltBlock._Content) if ltBlock?._Content?
-
-                                        unless secondEmpty
-
-
-
-
-
-
-            for token, b in line.Tokens
-                switch
-                    when token.IsSelector("Enclosure.Open.Block")
-
-
-
-
-
-
-
-        for line, a in @_Lines
-            continue if line.IsEmpty()
-
-            lineQueue = [ ]
-
-            inlineBlock = false
-
-
-                    when token.IsSelector("Enclosure.Close.Block")
-                        continue unless blockStack.length
-
-                        ctBlock = blockStack[blockStack.length - 1]
-                        if token.IsSelector(ctBlock._Close)
-                            blockStack.pop()
-                            contentStack.pop() if ctBlock._Content?
-
-                            # Suffix processing
-
-                    else
-                        inlineBlock = true unless token.IsEmpty()
-
-                        if contentStack.length
-                            content = contentStack[contentStack.length - 1]
-                        else
-                            content = @_Lexicon.Types
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return matches
 
     _ProcessFile: ->
         idxLine = 0
+        idxToken = 0
         ctLine = @_ResetLine(idxLine++)
 
+        # Read out every single token from the file
         while ( ctToken = @_FileStream.ReadToken() )
+
             @_Tokens.push(ctToken)
             ctLine.Add(ctToken)
-            if ctLine.IsClosed
+
+            # Terminate the raw code line
+            if ctToken.IsSelector('WhiteSpace.NewLine')
                 ctLine.BlockStack = @_FileStream.OpenBlocks()
+
+                # Start a new raw code line
                 ctLine = @_ResetLine(idxLine++)
+
+                # Update the token pool position (for future insertions as above and processing as below)
+                idxToken = @_Tokens.length - 1
+
+        ltMatches = null
+        # a = 13
+        # line = @_Lines[a]
+        for line, a in @_Lines
+            continue if line.IsEmpty()
+            console.log("Current Line: " + a)
+            line.Matches = @_ResolveLine(line)
+            console.log(line.Matches)
+
+        # Fresh line
+        #   - If this line matches one or more patterns
+        #       > If more than one pattern is matched
+        #           >> If only one of these matches is marked as complete
+        #               * Then this pattern should be used
+        #
+        #           >> If multiple matches are marked as complete
+        #               * Use the pattern with the greatest number of matched tokens
+        #
+        #           >> If no patterns are marked as complete
+        #               * Process the subsequent line to see if any matches improve
+        #
+        #       > If only one pattern is matched
+        #           >> Then this pattern should be used
+        #           >> If this match is marked as complete
+        #               * Reset all matches
+        #           >> Otherwise
+        #               * Process the subsequent line to see if the match improves
+        #
+        #   - Otherwise
+        #       > Reset all patterns
+        #       > Continue processing the subsequent line
+
+
+
 
     _ReprocessLine: (text, lineNum) ->
         @_LineStream.Reset(text, @_OpenBlocks(lineNum))
@@ -328,7 +218,7 @@ module.exports = class CodeFile
         line.Add(@_LineStream.ReadToken()) while ( !@_LineStream.EOS() )
         line.BlockStack = @_LineStream.OpenBlocks()
         return line
-
+    # _RESETLINE - Deletes and reinitializes a single line of source code.
     _ResetLine: (lineNum) ->
         line = @_Lines[lineNum] = new CodeLine()
 
@@ -344,8 +234,6 @@ module.exports = class CodeFile
                     line.Add(new Token("@Outdent", "Symbols.Enclosure.Close.Block"))
 
         return line
-
-
 
 
     ## PUBLIC UTILITIES ##
@@ -364,11 +252,13 @@ module.exports = class CodeFile
     # REPROCESSFILE - Deletes all stored data and completely reprocesses all text inside the file.
     ReprocessFile: =>
         @_FileStream.Reset(@_Editor.getText())
-        @_Lines     = [ ]
-        @_Tokens    = [ ]
-        @_Types     = [ ]
+        @_Lines         = [ ]
+        @_Tokens        = [ ]
+        @_Types         = [ ]
 
         @_ProcessFile()
+
+        # Scan blocks of code
 
         # @_Editor.ActiveEditor.displayBuffer.tokenizedBuffer.retokenizeLines()
         # @_Editor.ActiveEditor.displayBuffer.tokenizedBuffer.reloadGrammar()

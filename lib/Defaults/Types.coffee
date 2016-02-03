@@ -30,8 +30,6 @@ Rule:
 #   ( ) -   Parentheses indicate a grouping of one or more other elements that may or may not be present in some text.
 #
 #   < > -   These enclosures indicate the presence of one or more tokens that are to be tagged.
-
-
 module.exports =
 
     Class:
@@ -47,7 +45,7 @@ module.exports =
                 _Prefix:
                     """
                         <Output> <Name> [Open.Group]
-                        ( <Input.Argument> ( [Assignment] <DefaultValue>) ([Separator]) )
+                        ( <Input.Argument> ([Assignment] <DefaultValue>) ([Separator]) )
                         [Close.Group]
                     """
 
@@ -58,13 +56,13 @@ module.exports =
         _Tag:               "Types.Enumeration"
         _Content:
             Enumerator:     "<Name> [Operator.Assignment]"
-
-    Structure:
-        _Close:              blockClose
-        _Open:               blockOpen
-        _Prefix:             "[Keyword.Type.Structure] <Name>"
-        _Tag:               "Types.Structure"
-
-        _Content:
-            Field:          "<Name> [Operator.Assignment]"
-            Method:         "<Output> <Name> [Open.Group] (<Input> ([Separator] <Input>)*)? [Close.Group]"
+    #
+    # Structure:
+    #     _Close:              blockClose
+    #     _Open:               blockOpen
+    #     _Prefix:             "[Keyword.Type.Structure] <Name>"
+    #     _Tag:               "Types.Structure"
+    #
+    #     _Content:
+    #         Field:          "<Name> [Operator.Assignment]"
+    #         Method:         "<Output> <Name> [Open.Group] (<Input> ([Separator] <Input>)*)? [Close.Group]"

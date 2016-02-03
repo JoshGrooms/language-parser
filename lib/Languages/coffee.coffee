@@ -30,6 +30,7 @@ module.exports =
                 Existential:    "?"
             Symbol:
                 Comment:        "#"
+                Function:       [ "->", "=>" ]
                 Preprocessor:   ""
                 This:           "@"
 

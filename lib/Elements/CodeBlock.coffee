@@ -13,7 +13,8 @@
 require('../Utilities/StringExtensions')
 
 CodeLine                = require('./CodeLine')
-CodeSignature           = require('./Signature')
+# CodeSignature           = require('./Signature')
+CodeSignature           = require('./CodeSignature')
 { type }                = require('../Utilities/ObjectFunctions')
 { Lexicon, Symbols }    = require('../Defaults')
 
@@ -39,8 +40,6 @@ module.exports = class CodeBlock
 
 
     _IsCapturing:   false
-
-
 
 
 
@@ -103,6 +102,29 @@ module.exports = class CodeBlock
                 when 'string' then content[k] = new CodeSignature(content[k])
 
 
+
+    ## PUBLIC UTILITIES ##
+    MatchContent: (line) ->
+        return null unless @_Content?
+
+        ltMatch = null
+        ltStrength = 0
+        ltBlock = null
+        for k, v of @_Content
+            switch
+                when v instanceof CodeSignature
+                    [ match, strength ] = v.Match(line)
+
+                when v instanceof CodeBlock
+                    [ match, strength ] = v.MatchPrefix(line)
+
+            if match? && (strength > ltStrength)
+                ltBlock = v
+                ltMatch = match
+                ltStrength = strength
+
+        return [ ltMatch, strength ]
+
     MatchPrefix: (line) ->
         return null unless @_Prefix?
         return @_Prefix.Match(line)
@@ -111,53 +133,8 @@ module.exports = class CodeBlock
         return null unless @_Suffix?
         return @_Suffix.Match(line)
 
-    # MatchContent: (line) ->
-    #     return null unless @_Content?
-    #     switch
-    #         # when @_Content instanceof CodeBlock
-    #
-    #         when @_Content instanceof CodeSignature
-    #             return @_Content.Match(line)
 
-
-
-
-    
-
-    HasContent: -> return @_Content?
-
-
-
-    Add: (token) ->
-        return false if @IsClosed
-
-        # if @_CurrentBlock?
-        #
-        #     @_CurrentBlock.Add(token)
-        #     if @_CurrentBlock.
-
-
-
-
-
-    # Add: (token) ->
-        # return false if @_IsClosed
-        #
-        # if @_CurrentBlock?
-        #     @_CurrentBlock.Add(token)
-        #
-        #
-        #     return undefined
-        #
-        #
-        # @_CurrentLine.Add(token)
-        #
-        # switch
-        #     when token.Type is "NewLine"
-        #         @Children.push(@_CurrentLine)
-        #         @_CurrentLine = new CodeLine()
-        #
-        #     when token.Type.Contains("Enclosure.Open")
-        #
-        #
-        # if token.Type is "NewLine"
+    Reset: ->
+        @_Prefix?.Reset()
+        @_Suffix?.Reset()
+        v.Reset() for k, v of @_Content

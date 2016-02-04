@@ -21,63 +21,6 @@ exports.clone = clone = (x) ->
     y[k] = clone x[k] for k of x
     return y
 
-# ISFIELD - Determines whether an object contains a specific field name anywhere within its hierarchy.
-exports.isfield = isfield = (x, field) ->
-    return false if type(x) isnt 'object'
-    for k, v of x
-        return true if k is field
-    return false
-
-# TYPE - Determines the type of an object.
-#
-#   Any entity in JavaScript (and, by extension, CoffeeScript) belongs to one of the general types
-#   listed within this function. This includes user-defined classes, which belong to the type 'object'.
-#
-#   This function was created because of flaws that exist in the native 'typeof' function. Specifically,
-#   'typeof' fails to differentiate between objects, arrays, and null or undefined input values. For more
-#   information and to see the original logic from which this function was derived, see the CoffeeScript
-#   Cookbook:
-#
-#       https://coffeescript-cookbook.github.io/chapters/classes_and_objects/type-function
-#
-#   SYNTAX:
-#       t = type(x)
-#
-#   OUTPUT:
-#       t:      string
-#               A string containing the identified type of the inputted object. This output will always
-#               take one of the following values:
-#
-#                   'array'     - The input is an array of values.
-#                   'boolean'   - The input is a Boolean.
-#                   'date'      - The input is a date object.
-#                   'function'  - The input is a function or class method handle.
-#                   'number'    - The input is a number.
-#                   'object'    - The input is a data structure or class.
-#                   'regexp'    - The input is a regular expression
-#                   'string'    - The input is a string
-#                   'undefined' - The input is either 'null' or 'undefined'
-#
-#   INPUT:
-#       x:      object
-#               Any kind of valid CoffeeScript entity, including: user-defined classes, undefined and null
-#               values, arrays, strings, regular expressions,
-exports.type = type = (x) ->
-    return "Undefined" if (x is null || x is undefined)
-    converter =
-    {
-        '[object Array]':       'array'
-        '[object Boolean]':     'boolean'
-        '[object Date]':        'date'
-        '[object Function]':    'function'
-        '[object Number]':      'number'
-        '[object Object]':      'object'
-        '[object RegExp]':      'regexp'
-        '[object String]':      'string'
-    }
-
-    return converter[Object.prototype.toString.call(x)]
-
 # CONTAINS - Determines whether a particular value exists within a data object.
 #
 #   SYNTAX:
@@ -141,7 +84,24 @@ exports.find = find = (x, value) ->
         when 'string'
             if contains(x, value) then return '' else return null
 
+# ISEMPTY - Determines whether an entity contains any values.
+exports.isempty = isempty = (x) ->
+    return true unless x?
+    switch type(x)
+        when 'array' || 'string'    then return x.length == 0
+        when 'object'               then return Object.keys(x).length == 0
+        when 'regexp'               then return x.source.length == 0
+        else
+            return false
 
+# ISFIELD - Determines whether an object contains a specific field name anywhere within its hierarchy.
+exports.isfield = isfield = (x, field) ->
+    return false if type(x) isnt 'object'
+    for k, v of x
+        return true if k is field
+    return false
+
+# OVERLOAD - Overloads one object with the the keys and values of another object.
 exports.overload = overload = (x, y) ->
     return x if type(x) != type(y) != 'object'
 
@@ -152,3 +112,53 @@ exports.overload = overload = (x, y) ->
             x[k] = v
 
     return x
+
+# TYPE - Determines the type of an object.
+#
+#   Any entity in JavaScript (and, by extension, CoffeeScript) belongs to one of the general types
+#   listed within this function. This includes user-defined classes, which belong to the type 'object'.
+#
+#   This function was created because of flaws that exist in the native 'typeof' function. Specifically,
+#   'typeof' fails to differentiate between objects, arrays, and null or undefined input values. For more
+#   information and to see the original logic from which this function was derived, see the CoffeeScript
+#   Cookbook:
+#
+#       https://coffeescript-cookbook.github.io/chapters/classes_and_objects/type-function
+#
+#   SYNTAX:
+#       t = type(x)
+#
+#   OUTPUT:
+#       t:      string
+#               A string containing the identified type of the inputted object. This output will always
+#               take one of the following values:
+#
+#                   'array'     - The input is an array of values.
+#                   'boolean'   - The input is a Boolean.
+#                   'date'      - The input is a date object.
+#                   'function'  - The input is a function or class method handle.
+#                   'number'    - The input is a number.
+#                   'object'    - The input is a data structure or class.
+#                   'regexp'    - The input is a regular expression
+#                   'string'    - The input is a string
+#                   'undefined' - The input is either 'null' or 'undefined'
+#
+#   INPUT:
+#       x:      object
+#               Any kind of valid CoffeeScript entity, including: user-defined classes, undefined and null
+#               values, arrays, strings, regular expressions,
+exports.type = type = (x) ->
+    return "Undefined" if (x is null || x is undefined)
+    converter =
+    {
+        '[object Array]':       'array'
+        '[object Boolean]':     'boolean'
+        '[object Date]':        'date'
+        '[object Function]':    'function'
+        '[object Number]':      'number'
+        '[object Object]':      'object'
+        '[object RegExp]':      'regexp'
+        '[object String]':      'string'
+    }
+
+    return converter[Object.prototype.toString.call(x)]

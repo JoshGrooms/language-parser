@@ -8,10 +8,13 @@ require('../Utilities/StringExtensions')
 
 
 
-class PatternMatch
+class LineMatch
     IsComplete:     false
     IsMatched:      false
+    Tag:            ""
     Tokens:         { }
+
+    Count: -> return Object.keys(@Tokens).length
 
     constructor: (@IsComplete = false, @IsMatched = false, @Tokens = { }) ->
 
@@ -123,7 +126,6 @@ module.exports = class CodeSignature
 
         switch
             when element.Named?
-                # return true if token.IsEmpty()
                 return false unless token.IsSelector('Variable') || token.IsSelector('Words.Type')
 
                 @_WorkingMatch[idxToken] = element.Named
@@ -151,29 +153,21 @@ module.exports = class CodeSignature
                     return true if token.IsEmpty()
                     return false
 
-    _MatchLine: (line, start) ->
-        isMatched = false
-        for a in [ start .. line.Count() - 1 ]
-            return true if @_IsComplete()
-            continue if line.Tokens[a].IsEmpty()
-
-            isMatched = @_MatchElement(line, a)
-            return false unless isMatched
-
-        return isMatched
-
-
-
-
     Match: (line, start = 0) ->
         start = 0
-        isMatched = false
         while start < line.Count()
-            isMatched = @_MatchLine(line, start++)
+
+            isMatched = false
+            for a in [ start++ .. line.Count() - 1 ]
+                break if @_IsComplete()
+                continue if line.Tokens[a].IsEmpty()
+                isMatched = @_MatchElement(line, a)
+                break unless isMatched
+
             break if isMatched
             @Reset()
 
-        return new PatternMatch(@_IsComplete(), isMatched, @_WorkingMatch)
+        return new LineMatch(@_IsComplete(), isMatched, @_WorkingMatch)
 
     Reset: ->
         @_WorkingIndex  = 0

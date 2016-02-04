@@ -38,26 +38,13 @@ module.exports = class CodeLine
     # COUNT - Returns the number of tokens present in this code line.
     Count: -> return @Tokens.length
 
-
-    ContainsSelectors: (selectors) ->
-        return false unless selectors? && !IsEmpty()
-        selectors = [ selectors ] if type(selectors) is 'string'
-
-        idx = 0
-        for token in @Tokens
-            idx++ if token.IsSelector(selectors[idx])
-            break if allSelectorsFound = idx == selectors.length
-
-        return true if allSelectorsFound
-        return false
-
     # FINDSELECTOR - Determines the index of the first token whose type matches the inputted selector.
     FindSelector: (selector) ->
         for token, idx in @Tokens
             return idx if token.IsSelector(Selector)
         return -1
 
-    # FINDSELECTORS - Determines the indices of
+    # FINDSELECTORS - Determines the indices of all tokens whose types match the inputted selector.
     FindSelectors: (selectors) ->
         idx = 0
         results = [ ]
@@ -68,6 +55,7 @@ module.exports = class CodeLine
             break if idx == selectors.length
 
         return results
+        
     # GETMEANINGFULTOKEN - Finds a non-whitespace token relative to a starting position.
     GetMeaningfulToken: (start, offset) ->
         offset = 1 unless offset
